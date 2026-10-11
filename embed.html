@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <title>Pallet Blocks embed demo</title>
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        gap: 16px;
+        background: #183c52;
+        color: #ebeac5;
+        font:
+          15px/1.4 system-ui,
+          sans-serif;
+      }
+      main {
+        display: grid;
+        grid-template-columns: minmax(0, 776px) 220px;
+        gap: 16px;
+        width: min(1012px, calc(100vw - 32px));
+      }
+      #console {
+        aspect-ratio: 256 / 208;
+        border: 4px solid #171717;
+        border-radius: 6px;
+      }
+      aside {
+        background: #0b1220;
+        border: 2px solid #171717;
+        border-radius: 6px;
+        padding: 12px 16px;
+      }
+      h1 {
+        font-size: 16px;
+        margin: 0 0 8px;
+      }
+      ol {
+        margin: 0;
+        padding-left: 22px;
+      }
+      label {
+        display: block;
+        margin-top: 16px;
+      }
+      input {
+        width: 100%;
+        box-sizing: border-box;
+      }
+      @media (max-width: 760px) {
+        main {
+          grid-template-columns: minmax(0, 1fr);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div id="console"></div>
+      <aside>
+        <h1>Host leaderboard</h1>
+        <ol id="board"></ol>
+        <label>Player name <input id="name" value="ASH" maxlength="10" /></label>
+        <p><button id="remount" type="button">Remount with this name</button></p>
+        <p id="last"></p>
+      </aside>
+    </main>
+    <script type="module">
+      // A stand-in for a host page: it mounts the game with a player's name,
+      // records every finished game on its own leaderboard, and lets the game
+      // show that leaderboard on its title and results screens.
+      import { mountPalletBlocks } from './src/embed.ts';
+
+      const KEY = 'pallet-blocks-demo:leaderboard';
+      const read = () => JSON.parse(localStorage.getItem(KEY) ?? '[]');
+      const write = (rows) => localStorage.setItem(KEY, JSON.stringify(rows));
+      const board = document.getElementById('board');
+      const render = () => {
+        board.replaceChildren(
+          ...read().map((row) => {
+            const li = document.createElement('li');
+            li.textContent = `${row.name} - ${row.score}`;
+            return li;
+          }),
+        );
+      };
+
+      let game;
+      const mount = () => {
+        game?.destroy();
+        const playerName = document.getElementById('name').value;
+        game = mountPalletBlocks(document.getElementById('console'), {
+          playerName,
+          onGameOver: async ({ score, lines, level, name }) => {
+            document.getElementById('last').textContent =
+              `Last game: ${score} points, ${lines} lines, level ${level}.`;
+            const rows = [...read(), { name, score }].sort((a, b) => b.score - a.score).slice(0, 10);
+            write(rows);
+            render();
+          },
+          loadLeaderboard: async () => read(),
+          onExit: () => {
+            document.getElementById('last').textContent = 'The player left the game.';
+          },
+        });
+      };
+      document.getElementById('remount').addEventListener('click', mount);
+      render();
+      mount();
+    </script>
+  </body>
+</html>

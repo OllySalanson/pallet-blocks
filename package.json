@@ -1,0 +1,50 @@
+{
+  "name": "pallet-blocks",
+  "version": "1.0.0",
+  "description": "A falling-blocks puzzle game in FireRed-style pixel art, playable standalone or embedded.",
+  "license": "MIT",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/OllySalanson/pallet-blocks.git"
+  },
+  "homepage": "https://ollysalanson.github.io/pallet-blocks/",
+  "files": [
+    "dist-lib"
+  ],
+  "main": "./dist-lib/pallet-blocks.js",
+  "module": "./dist-lib/pallet-blocks.js",
+  "types": "./dist-lib/types/embed.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist-lib/types/embed.d.ts",
+      "import": "./dist-lib/pallet-blocks.js"
+    }
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "npm run build:site && npm run build:lib",
+    "build:site": "vite build",
+    "build:lib": "vite build --mode lib && tsc -p tsconfig.lib.json",
+    "preview": "vite preview",
+    "lint": "eslint . && prettier --check .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "prepare": "npm run build:lib",
+    "format": "prettier --write ."
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.12.0",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.13.0",
+    "prettier": "^3.9.10",
+    "typescript": "~6.0.2",
+    "typescript-eslint": "^8.71.1",
+    "vite": "^8.3.4",
+    "vitest": "^5.0.3"
+  },
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  }
+}
