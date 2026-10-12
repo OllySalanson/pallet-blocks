@@ -75,7 +75,14 @@ const SOUNDS: Readonly<Record<SoundName, { readonly notes: readonly Note[]; read
   },
   spin: { notes: [{ at: 0, freq: 600, to: 2400, dur: 0.16, vol: 0.25 }] },
   allClear: { notes: arpeggio([84, 88, 91, 96, 91, 96], 0.07, 0.1) },
-  levelUp: { notes: arpeggio([67, 72, 76, 79, 84], 0.07, 0.1, 'square', 0.4) },
+  // A quick climb to a held top note over a low one: unmistakably not a line clear.
+  levelUp: {
+    notes: [
+      ...arpeggio([67, 72, 76, 79], 0.06, 0.07, 'square', 0.4),
+      { at: 0.24, freq: midi(84), dur: 0.32, vol: 0.45 },
+      { at: 0.24, freq: midi(60), dur: 0.32, type: 'triangle', vol: 0.6 },
+    ],
+  },
   gameOver: {
     notes: [
       ...arpeggio([72, 67, 64, 60, 55], 0.16, 0.18, 'square', 0.4),
@@ -122,14 +129,15 @@ export class Sfx {
     }
   }
 
-  play(name: SoundName): void {
+  /** Plays a sound now, or `delaySeconds` from now. */
+  play(name: SoundName, delaySeconds = 0): void {
     const ctx = this.context;
     const master = this.master;
     if (this.muted || !ctx || !master || ctx.state !== 'running') {
       return;
     }
     const sound = SOUNDS[name];
-    const start = ctx.currentTime + 0.005;
+    const start = ctx.currentTime + 0.005 + delaySeconds;
     for (const note of sound.notes) {
       this.tone(ctx, master, start, note);
     }

@@ -31,12 +31,14 @@ stack reaches the top.
 - **Lock delay.** A piece that touches down has half a second before it locks.
   Moving or turning it resets that, up to 15 times per piece.
 - **Levels.** Every 10 lines is a level, and each level falls faster, from one
-  row a second at level 1 to effectively instant by level 20. You can start on
-  any level from 1 to 15.
+  row a second at level 1 to a third of a second at level 5 and a tenth at level
+  9; from level 19 a new piece lands on the stack the moment it appears. The
+  speed changes the moment the level does, and keeps time even when the machine
+  is busy and drawing few frames. You can start on any level from 1 to 15.
 
 ### Scoring
 
-All clear points are multiplied by your current level.
+Points for a clear, and the bonuses on it, are multiplied by your current level.
 
 | Clear                                                                      | Points                                  |
 | -------------------------------------------------------------------------- | --------------------------------------- |
@@ -45,12 +47,20 @@ All clear points are multiplied by your current level.
 | T-spin mini with no lines / single / double                                | 100 / 200 / 400                         |
 | Back-to-back (a quad or T-spin clear when the last line clear was one too) | x1.5                                    |
 | Combo (clearing lines with consecutive pieces)                             | +50 per step of the combo               |
-| All clear (the well left empty)                                            | +800 / 1200 / 1800 / 2000 for 1-4 lines |
+| Perfect clear (the well left empty)                                        | +800 / 1200 / 1800 / 2000 for 1-4 lines |
 | Soft drop / hard drop                                                      | 1 / 2 per row (not multiplied)          |
+
+A back-to-back quad that leaves the well empty earns a +3200 bonus instead of +2000.
 
 A T-spin is a T piece turned into place so that three of the four corners
 around its centre are filled; if only one of the two corners it points at is
-filled, it is a mini.
+filled, it is a mini, unless the turn needed the last and longest of its kicks.
+
+Every clear is called out in the panel at the bottom left: what it was, any
+back-to-back (`B2B x1.5`) or combo (`COMBO x2`) on it, and the points it
+earned. The big ones (a quad, a T-spin that clears lines, a perfect clear) are
+also lettered across the well with their points, and so is each new level
+(`LEVEL UP!`), while the LEVEL row flashes and a jingle plays.
 
 ## Controls
 

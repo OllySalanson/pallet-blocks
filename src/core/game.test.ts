@@ -285,6 +285,23 @@ describe('clearing lines', () => {
     expect(locks[1]!.points).toBe(1200 + 50);
   });
 
+  it('breaks the back-to-back chain with a plain clear, but not with a lock that clears nothing', () => {
+    const rows = Array.from({ length: 8 }, () => '#########.');
+    const game = newGame({
+      sequence: ['I', 'O', 'I', 'I', 'I'],
+      board: bottom('G.........', ...rows),
+    });
+    game.piece = { kind: 'I', rotation: 1, x: 7, y: 20 };
+    game.press('hardDrop'); // a quad
+    game.piece = { kind: 'O', rotation: 0, x: 0, y: 20 };
+    game.press('hardDrop'); // clears nothing: the chain holds
+    game.piece = { kind: 'I', rotation: 1, x: 7, y: 20 };
+    game.press('hardDrop'); // a second quad is back-to-back
+    const locks = eventsOf(game.drainEvents(), 'lock');
+    expect(locks.map((lock) => lock.backToBack)).toEqual([false, false, true]);
+    expect(locks[2]!.points).toBe(1200);
+  });
+
   it('pays a perfect-clear bonus when the board is emptied', () => {
     const game = newGame({ sequence: ['I', 'O'], board: bottom('###....###') });
     game.press('hardDrop');
@@ -319,6 +336,19 @@ describe('spins', () => {
     expect(lock).toMatchObject({ lines: 1, spin: 'mini', points: 200 });
   });
 
+  it('counts a mini as a full spin when the turn needed the last, longest kick', () => {
+    const game = newGame({
+      sequence: ['T', 'O'],
+      board: bottom('..##.##...', '#..#.#....', '....##.###', '######..##', '######....'),
+    });
+    game.piece = { kind: 'T', rotation: 0, x: 6, y: 35 };
+    game.press('rotateCW');
+    // Two rows down and one left: only one corner it points at is covered.
+    expect(game.piece).toMatchObject({ rotation: 1, x: 5, y: 37 });
+    game.press('hardDrop');
+    expect(eventsOf(game.drainEvents(), 'lock')[0]).toMatchObject({ lines: 1, spin: 'full', points: 800 });
+  });
+
   it('is no spin unless the last thing the T did was turn', () => {
     const game = newGame({
       sequence: ['T', 'O'],
@@ -340,6 +370,44 @@ describe('levels', () => {
     const y = game.piece!.y;
     game.update(800);
     expect(game.piece!.y).toBe(y + 1);
+  });
+
+  it('reads the new speed for the piece already falling', () => {
+    const game = newGame({ sequence: ['I', 'O'], board: bottom('###....###') });
+    game.lines = 29;
+    game.press('hardDrop');
+    expect(game.level).toBe(4);
+    const y = game.piece!.y;
+    run(game, 480);
+    expect(game.piece!.y).toBe(y + 1);
+  });
+
+  it('keeps counting levels past 20 at the top speed', () => {
+    const game = newGame({ startLevel: 15, sequence: ['I', 'O'], board: bottom('###....###') });
+    game.lines = 59;
+    game.press('hardDrop');
+    expect(game.level).toBe(21);
+  });
+
+  it('puts a new piece straight onto the stack at 20G', () => {
+    const game = newGame({ startLevel: 19, sequence: ['T', 'O'] });
+    // Before any time passes, the piece is already resting on the floor.
+    expect(game.piece).toMatchObject({ kind: 'T', y: 38 });
+    game.press('hardDrop');
+    // And the next one on the T.
+    expect(game.piece).toMatchObject({ kind: 'O', y: 36 });
+  });
+
+  it('lets a piece slide along the stack at 20G until the lock delay runs out', () => {
+    const game = newGame({ startLevel: 20, sequence: ['O', 'T'] });
+    game.press('left');
+    game.release('left');
+    expect(game.piece).toMatchObject({ kind: 'O', y: 38 });
+    run(game, 400);
+    expect(game.piece).toMatchObject({ kind: 'O' });
+    run(game, 200);
+    expect(game.board.toRows().slice(-2)).toEqual(['...OO.....', '...OO.....']);
+    expect(game.piece).toMatchObject({ kind: 'T', y: 36 });
   });
 
   it('starts on the chosen level and pays at that level', () => {

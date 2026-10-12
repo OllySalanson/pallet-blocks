@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { clearPoints, gravityMsPerRow, isDifficultClear, levelFor, lockPoints } from './scoring';
+import {
+  TWENTY_G_MS_PER_ROW,
+  clearPoints,
+  gravityMsPerRow,
+  isDifficultClear,
+  levelFor,
+  lockPoints,
+} from './scoring';
 
 const base = { spin: 'none', level: 1, combo: 0, backToBack: false, perfectClear: false } as const;
 
@@ -68,6 +75,25 @@ describe('levels', () => {
       expect(gravityMsPerRow(level)).toBeLessThan(gravityMsPerRow(level - 1));
     }
     expect(gravityMsPerRow(10)).toBeCloseTo(64.15, 1);
+  });
+
+  it('follows the standard modern gravity table through level 20', () => {
+    // Seconds per row, as published for the modern marathon mode.
+    const table = [
+      1.0, 0.793, 0.6178, 0.47273, 0.3552, 0.262, 0.18968, 0.13473, 0.09388, 0.06415, 0.04298, 0.02822,
+      0.01815, 0.01144, 0.00706, 0.00426, 0.00252, 0.00146, 0.00082, 0.00046,
+    ];
+    table.forEach((seconds, i) => {
+      const ms = gravityMsPerRow(i + 1);
+      // The published figures are rounded to five places.
+      expect(Math.abs(ms / 1000 - seconds), `level ${i + 1}`).toBeLessThan(0.000006);
+    });
+  });
+
+  it('reaches 20G at level 19', () => {
+    expect(gravityMsPerRow(18)).toBeGreaterThan(TWENTY_G_MS_PER_ROW);
+    expect(gravityMsPerRow(19)).toBeLessThanOrEqual(TWENTY_G_MS_PER_ROW);
+    expect(gravityMsPerRow(20)).toBeLessThanOrEqual(TWENTY_G_MS_PER_ROW);
   });
 
   it('stops speeding up at level 20', () => {

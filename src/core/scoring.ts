@@ -11,6 +11,12 @@ export const LINES_PER_LEVEL = 10;
 /** The level whose gravity is the fastest the game gets. */
 export const MAX_GRAVITY_LEVEL = 20;
 
+/**
+ * Gravity this fast is "20G": a row every twentieth of a 60 Hz frame, so a
+ * piece is on the stack the moment it appears. The curve reaches it at level 19.
+ */
+export const TWENTY_G_MS_PER_ROW = 1000 / 60 / 20;
+
 /** Base points for a clear, before the level multiplier, indexed by lines cleared. */
 const LINE_POINTS = [0, 100, 300, 500, 800] as const;
 const MINI_SPIN_POINTS = [100, 200, 400] as const;
@@ -18,6 +24,9 @@ const FULL_SPIN_POINTS = [400, 800, 1200, 1600] as const;
 const PERFECT_CLEAR_POINTS = [0, 800, 1200, 1800, 2000] as const;
 /** A back-to-back four-line perfect clear is worth more than the plain one. */
 const BACK_TO_BACK_QUAD_PERFECT_CLEAR = 3200;
+
+/** What a back-to-back clear's points are multiplied by. */
+export const BACK_TO_BACK_MULTIPLIER = 1.5;
 
 export const SOFT_DROP_POINTS_PER_CELL = 1;
 export const HARD_DROP_POINTS_PER_CELL = 2;
@@ -73,7 +82,7 @@ export function lockPoints(input: LockScoreInput): number {
   const { lines, spin, level, combo, backToBack, perfectClear } = input;
   let points = clearPoints(lines, spin);
   if (backToBack) {
-    points *= 1.5;
+    points *= BACK_TO_BACK_MULTIPLIER;
   }
   if (lines > 0 && combo > 0) {
     points += COMBO_POINTS * combo;
