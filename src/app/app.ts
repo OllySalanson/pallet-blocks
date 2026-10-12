@@ -10,9 +10,11 @@ import {
   type Callout,
   type DropTrail,
   type LockFlash,
+  type ShownBanner,
 } from '../render/scene';
 import { LETTERBOX } from '../render/palette';
-import { describeLock } from './callouts';
+import { bannerForLevel, bannerForLock, describeLock, type Banner } from './callouts';
+import { advance, frameDelta } from './clock';
 import {
   LocalScores,
   NAME_MAX_LENGTH,
@@ -92,9 +94,10 @@ export interface PalletBlocksOptions {
 
 const MUTED_KEY = 'pallet-blocks:muted';
 const LAST_NAME_KEY = 'pallet-blocks:last-name';
-const MAX_FRAME_MS = 50;
 const SOFT_DROP_SOUND_GAP_MS = 45;
 const AFTER_GAME_INPUT_GUARD_MS = 700;
+/** The level-up jingle waits for a line-clear sound to finish. */
+const LEVEL_UP_SOUND_DELAY_S = 0.32;
 
 /**
  * The whole game, mounted into one element: a canvas, the keyboard, the loop,
@@ -129,6 +132,9 @@ export class PalletBlocksApp {
   private lastName = '';
 
   private callout: Callout | null = null;
+  private banner: ShownBanner | null = null;
+  /** Banners waiting for the one up now to finish. */
+  private bannerQueue: Banner[] = [];
   private trail: DropTrail | null = null;
   private flash: LockFlash | null = null;
   /** Set by a hard drop, for the lock that follows it in the same batch of events. */
@@ -242,7 +248,7 @@ export class PalletBlocksApp {
     if (this.destroyed) {
       return;
     }
-    const dt = this.lastFrame === null ? 0 : Math.min(MAX_FRAME_MS, Math.max(0, time - this.lastFrame));
+    const dt = frameDelta(this.lastFrame, time);
     this.lastFrame = time;
     this.nowMs += dt;
     this.update(dt);
@@ -251,6 +257,9 @@ export class PalletBlocksApp {
   };
 
   private update(dt: number): void {
+    if (this.isLive()) {
+      this.updateBanner();
+    }
     const screen = this.screen;
     if (screen.kind === 'ready') {
       const elapsedMs = screen.elapsedMs + dt;
@@ -277,7 +286,7 @@ export class PalletBlocksApp {
     if (!game) {
       return;
     }
-    game.update(dt);
+    advance(game, dt);
     this.handleEvents(game.drainEvents());
   }
 
@@ -298,6 +307,7 @@ export class PalletBlocksApp {
       tableTitle: this.leaderboard ? 'LEADERBOARD' : 'HIGH SCORES',
       highlight: this.screen.kind === 'results' ? this.highlight : -1,
       callout: this.callout,
+      banner: this.banner,
       trail: this.trail,
       flash: this.flash,
     });
@@ -310,7 +320,6 @@ export class PalletBlocksApp {
 
   private handleEvents(events: readonly GameEvent[]): void {
     let levelUp = 0;
-    let lock: LockResult | null = null;
     for (const event of events) {
       switch (event.type) {
         case 'move':
@@ -333,7 +342,6 @@ export class PalletBlocksApp {
           this.sfx.play('hardDrop');
           break;
         case 'lock':
-          lock = event;
           this.onLock(event);
           break;
         case 'levelUp':
@@ -348,13 +356,36 @@ export class PalletBlocksApp {
       }
     }
     if (levelUp) {
-      this.sfx.play('levelUp');
-      const lines = lock ? describeLock(lock) : [];
-      this.callout = {
-        lines: [...lines.slice(0, 2), `LEVEL ${levelUp}`],
-        points: lock?.points ?? 0,
-        atMs: this.nowMs,
-      };
+      this.showBanner(bannerForLevel(levelUp));
+    }
+  }
+
+  /** Puts a banner up, or queues it behind the one already up. */
+  private showBanner(banner: Banner): void {
+    if (this.banner) {
+      this.bannerQueue.push(banner);
+    } else {
+      // Up at once means alongside the line-clear sound: the jingle waits for it.
+      this.raiseBanner(banner, LEVEL_UP_SOUND_DELAY_S);
+    }
+  }
+
+  private updateBanner(): void {
+    const banner = this.banner;
+    if (banner && this.nowMs - banner.atMs >= banner.durationMs) {
+      const next = this.bannerQueue.shift();
+      this.banner = null;
+      if (next) {
+        this.raiseBanner(next, 0);
+      }
+    }
+  }
+
+  /** A level banner brings the jingle with it (and the renderer flashes the LEVEL row). */
+  private raiseBanner(banner: Banner, soundDelaySeconds: number): void {
+    this.banner = { ...banner, atMs: this.nowMs };
+    if (banner.kind === 'level') {
+      this.sfx.play('levelUp', soundDelaySeconds);
     }
   }
 
@@ -393,6 +424,10 @@ export class PalletBlocksApp {
     if (lines.length > 0) {
       this.callout = { lines, points: lock.points, atMs: this.nowMs };
     }
+    const banner = bannerForLock(lock);
+    if (banner) {
+      this.showBanner(banner);
+    }
   }
 
   // --- Flow ----------------------------------------------------------------------
@@ -406,6 +441,8 @@ export class PalletBlocksApp {
     this.game.drainEvents();
     this.screen = { kind: 'ready', elapsedMs: 0 };
     this.callout = null;
+    this.banner = null;
+    this.bannerQueue = [];
     this.trail = null;
     this.flash = null;
     this.highlight = -1;

@@ -1,6 +1,7 @@
 import { BOARD_WIDTH, BUFFER_ROWS, VISIBLE_ROWS, type CellValue } from '../core/board';
 import { pieceCells, type Game } from '../core/game';
 import { shapeOf, type PieceKind } from '../core/pieces';
+import type { Banner } from '../app/callouts';
 import type { ScoreEntry } from '../app/highScores';
 import { CURTAIN_ROW_MS, GO_MS, PAUSE_ITEMS, READY_MS, RESULT_ITEMS, type Screen } from '../app/screens';
 import {
@@ -15,6 +16,7 @@ import {
   CREAM_LIT,
   FRAME,
   GOLD,
+  GOLD_WASH,
   INK,
   INK_SOFT,
   RED,
@@ -54,6 +56,8 @@ const BEST_BOX = { x: RIGHT_X, y: 149, width: COLUMN_WIDTH, height: 38 };
 
 /** How long a callout stays up. */
 export const CALLOUT_MS = 1800;
+/** Callouts and banners blink this long as they arrive, then hold steady. */
+const ARRIVAL_BLINK_MS = 240;
 const LOCK_FLASH_MS = 90;
 const DROP_TRAIL_MS = 140;
 const DROP_BUMP_MS = 70;
@@ -68,6 +72,11 @@ interface Rect {
 export interface Callout {
   readonly lines: readonly string[];
   readonly points: number;
+  readonly atMs: number;
+}
+
+/** A banner, and when it went up. */
+export interface ShownBanner extends Banner {
   readonly atMs: number;
 }
 
@@ -96,6 +105,7 @@ export interface SceneState {
   /** Row of `table` to pick out, or -1. */
   readonly highlight: number;
   readonly callout: Callout | null;
+  readonly banner: ShownBanner | null;
   readonly trail: DropTrail | null;
   readonly flash: LockFlash | null;
 }
@@ -186,7 +196,7 @@ export class SceneRenderer {
       this.previewPiece(game.held, HOLD_BOX.x, HOLD_BOX.y + 18, HOLD_BOX.width, 18, !game.canHold);
     }
 
-    this.stats(game);
+    this.stats(game, state);
     this.callout(state, game);
 
     this.window(NEXT_BOX);
@@ -210,7 +220,7 @@ export class SceneRenderer {
     this.well(state, game);
   }
 
-  private stats(game: Game): void {
+  private stats(game: Game, state: SceneState): void {
     const box = STATS_BOX;
     this.window(box);
     const left = box.x + 6;
@@ -218,8 +228,16 @@ export class SceneRenderer {
     this.heading('SCORE', box);
     this.text(formatScore(game.score), right, box.y + 18, { color: INK, align: 'right' });
     this.divider(box, box.y + 31);
-    this.text('LEVEL', left, box.y + 35, { color: INK_SOFT });
-    this.text(String(game.level), right, box.y + 35, { color: INK, align: 'right' });
+    // While a new level is announced its row flashes: the speed has just gone up.
+    const banner = state.banner?.kind === 'level' ? state.banner : null;
+    const sinceLevelUp = banner ? state.nowMs - banner.atMs : Infinity;
+    const levelLit = !!banner && sinceLevelUp < banner.durationMs && Math.floor(sinceLevelUp / 150) % 2 === 0;
+    if (levelLit) {
+      this.ctx.fillStyle = GOLD_WASH;
+      this.ctx.fillRect(box.x + 3, box.y + 33, box.width - 6, 12);
+    }
+    this.text('LEVEL', left, box.y + 35, { color: levelLit ? RED : INK_SOFT });
+    this.text(String(game.level), right, box.y + 35, { color: levelLit ? RED : INK, align: 'right' });
     this.text('LINES', left, box.y + 46, { color: INK_SOFT });
     this.text(String(game.lines), right, box.y + 46, { color: INK, align: 'right' });
   }
@@ -241,21 +259,21 @@ export class SceneRenderer {
       return;
     }
     this.window(box, CREAM_LIT);
-    // A short blink as it arrives, then steady.
-    const age = state.nowMs - callout.atMs;
-    if (age < 240 && Math.floor(age / 60) % 2 === 1) {
+    if (isBlinkedOut(state.nowMs - callout.atMs)) {
       return;
     }
-    const lines = callout.lines.slice(0, 3);
     const centre = box.x + box.width / 2;
+    const dividerY = box.y + 44;
+    // The words sit in the middle of the space above the points.
+    const lines = callout.lines.slice(0, 4);
+    const step = this.font.capHeight + 2;
+    const top = box.y + 1 + Math.floor((dividerY - box.y - 1 - (lines.length * step - 2)) / 2);
     lines.forEach((line, i) => {
-      this.text(line, centre, box.y + 6 + i * 12, { color: i === 0 ? RED : INK, align: 'center' });
+      this.text(line, centre, top + i * step, { color: i === 0 ? RED : INK, align: 'center' });
     });
     if (callout.points > 0) {
-      this.text(`+${formatScore(callout.points)}`, centre, box.y + box.height - 15, {
-        color: INK_SOFT,
-        align: 'center',
-      });
+      this.divider(box, dividerY);
+      this.text(`+${formatScore(callout.points)}`, centre, dividerY + 3, { color: INK, align: 'center' });
     }
   }
 
@@ -333,6 +351,10 @@ export class SceneRenderer {
       }
     }
 
+    if (live && state.banner) {
+      this.banner(state.banner, state.nowMs, fieldY);
+    }
+
     if (screen.kind === 'ready') {
       const word = screen.elapsedMs < READY_MS ? 'READY' : 'GO!';
       if (screen.elapsedMs < READY_MS + GO_MS) {
@@ -343,6 +365,48 @@ export class SceneRenderer {
       this.text('GAME', FIELD_X + FIELD_WIDTH / 2, fieldY + 52, { ...TITLE_TEXT, align: 'center', scale: 2 });
       this.text('OVER', FIELD_X + FIELD_WIDTH / 2, fieldY + 76, { ...TITLE_TEXT, align: 'center', scale: 2 });
     }
+  }
+
+  /** A big moment across the middle of the well: lettering only, so the stack shows through around it. */
+  private banner(banner: ShownBanner, nowMs: number, fieldY: number): void {
+    const age = nowMs - banner.atMs;
+    if (age >= banner.durationMs || isBlinkedOut(age)) {
+      return;
+    }
+    const font = this.font;
+    const centre = FIELD_X + FIELD_WIDTH / 2;
+    const small = font.capHeight;
+    // Big lines are lettered at twice size when they fit inside the well with a pixel to spare.
+    const scaleFor = (line: string) => (font.measure(line, 2) + 4 <= FIELD_WIDTH - 2 ? 2 : 1);
+    const parts: { text: string; height: number; big: boolean; style: TextStyle }[] = [];
+    for (const header of banner.headers) {
+      parts.push({ text: header, height: small, big: false, style: { color: GOLD, outline: FRAME } });
+    }
+    for (const line of banner.lines) {
+      const scale = scaleFor(line);
+      parts.push({ text: line, height: scale * small, big: true, style: { ...TITLE_TEXT, scale } });
+    }
+    if (banner.footer) {
+      parts.push({
+        text: banner.footer,
+        height: small,
+        big: false,
+        style: { color: CREAM_LIT, outline: FRAME },
+      });
+    }
+    // Room between big lines for their outline and depth, as GAME OVER has.
+    const gapAfter = (i: number) => (parts[i]!.big && parts[i + 1]?.big ? 8 : 5);
+    const height = parts.reduce(
+      (sum, part, i) => sum + part.height + (i < parts.length - 1 ? gapAfter(i) : 0),
+      0,
+    );
+    // Rises into place as it arrives.
+    const rise = Math.max(0, 4 - Math.floor(age / 40));
+    let y = fieldY + Math.round(FIELD_HEIGHT * 0.42 - height / 2) + rise;
+    parts.forEach((part, i) => {
+      this.text(part.text, centre, y, { ...part.style, align: 'center' });
+      y += part.height + gapAfter(i);
+    });
   }
 
   private curtainRows(screen: Screen): number {
@@ -646,6 +710,11 @@ export class SceneRenderer {
   private text(text: string, x: number, y: number, style: TextStyle): void {
     this.font.draw(this.ctx, text, x, y, style);
   }
+}
+
+/** Whether something that has been up `ageMs` is in the dark half of its arrival blink. */
+function isBlinkedOut(ageMs: number): boolean {
+  return ageMs < ARRIVAL_BLINK_MS && Math.floor(ageMs / 60) % 2 === 1;
 }
 
 /** Scores with thin separators, as the handheld games print money. */

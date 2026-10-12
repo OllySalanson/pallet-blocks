@@ -5,6 +5,7 @@ import type { Random } from './random';
 import {
   HARD_DROP_POINTS_PER_CELL,
   SOFT_DROP_POINTS_PER_CELL,
+  TWENTY_G_MS_PER_ROW,
   gravityMsPerRow,
   isDifficultClear,
   levelFor,
@@ -593,6 +594,12 @@ export class Game {
         this.lastMoveWasRotation = false;
         this.lastKickIndex = 0;
         this.events.push({ type: 'spawn', kind });
+        if (gravityMsPerRow(this.level) <= TWENTY_G_MS_PER_ROW) {
+          // At 20G the piece is never seen in the air.
+          while (this.stepDown()) {
+            // Fall to the stack.
+          }
+        }
         // A direction already held when the piece appears moves it at once.
         if (this.shiftDirection !== 0 && this.dasTimerMs >= this.dasMs) {
           this.shift(this.shiftDirection);
