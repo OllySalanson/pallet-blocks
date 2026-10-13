@@ -139,3 +139,9 @@ One short section per iteration: what a player saw, what changed, and how a play
 - Seen: the GAME OVER results table numbers its rows 1, 2, 3, but the title screen's HIGH SCORES box listed the same names and scores with no numbers at all, so the two tables of the same scores looked different and a player had to count down the list to see what place a score held.
 - Changed: the title table now takes its rows from `tableRows`, like the results, and prints each place in the soft ink in a narrow column before the name. `titleRowColumns` in `src/render/scene.ts` sets out the rank, name and score so a long name is still cut short with a dot before it reaches its score.
 - How a player notices: the title's HIGH SCORES box reads 1 to 6 down its left edge, matching the results table.
+
+## A turn key held as the game ended typed itself into the name
+
+- Seen: holding X (turn) as the stack topped out filled the NEW HIGH SCORE name box with XXXXXXXXXX. The 700ms guard only caught the first moment, then the key's auto-repeat typed into the box, after any remembered name. Z and C (hold) did the same.
+- Changed: the name box now ignores the auto-repeat of any key that was already down when it came up, using the same `FreshKeys` check the menus use (`src/app/app.ts`). A key pressed in the box still types, and still repeats while held.
+- How a player notices: a turn or hold key still down as the game ends leaves the name alone, so the player types their own name instead of deleting a row of Xs first.

@@ -124,6 +124,29 @@ describe('keys held into a menu', () => {
   });
 });
 
+describe('keys held into the name box', () => {
+  it('does not type the repeats of a turn key held as the game ends', () => {
+    const fresh = new FreshKeys();
+    fresh.press('KeyX', false);
+    // The stack tops out and the name box comes up: a new screen.
+    fresh.clear();
+    for (let i = 0; i < 10; i += 1) {
+      fresh.press('KeyX', true);
+      expect(fresh.counts('KeyX', true)).toBe(false);
+    }
+  });
+
+  it('types a key pressed in the box, and goes on typing it while it is held', () => {
+    const fresh = new FreshKeys();
+    fresh.press('KeyX', false);
+    fresh.clear();
+    fresh.release('KeyX');
+    expect(fresh.counts('KeyX', false)).toBe(true);
+    fresh.press('KeyX', false);
+    expect(fresh.counts('KeyX', true)).toBe(true);
+  });
+});
+
 describe('keys on the results screen', () => {
   it('leaves the results only on keys that do nothing in play', () => {
     expect(['Enter', 'NumpadEnter'].map(resultsKeyFor)).toEqual(['confirm', 'confirm']);

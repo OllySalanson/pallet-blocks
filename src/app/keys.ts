@@ -122,7 +122,8 @@ export class HeldKeys {
 /**
  * The keys pressed since the screen last changed. A key already down when a
  * menu opens (the soft drop held into a pause, say) goes on sending
- * auto-repeat presses, and a menu must not let those run its cursor away.
+ * auto-repeat presses, and a menu must not let those run its cursor away, nor
+ * the name box let a turn key held as the game ends type itself over and over.
  */
 export class FreshKeys {
   private readonly down = new Set<string>();

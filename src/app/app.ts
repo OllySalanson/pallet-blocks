@@ -779,6 +779,10 @@ export class PalletBlocksApp {
     }
 
     if (screen.kind === 'nameEntry') {
+      // A turn key held from play into the name box would type a row of Xs.
+      if (!this.fresh.counts(code, event.repeat)) {
+        return true;
+      }
       return this.nameKey(event, screen.name);
     }
     if (isMuteKey(code)) {
