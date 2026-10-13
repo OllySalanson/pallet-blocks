@@ -4,3 +4,6 @@ node_modules
 package-lock.json
 # Generated pointer to AGENTS.md
 CLAUDE.md
+# Local tool state, never committed
+.gnhf
+.claude/settings.local.json

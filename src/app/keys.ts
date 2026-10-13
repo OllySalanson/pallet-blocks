@@ -45,3 +45,27 @@ export function menuKeyFor(code: string): MenuKey | null {
 
 export const isPauseKey = (code: string): boolean => code === 'Escape' || code === 'KeyP';
 export const isMuteKey = (code: string): boolean => code === 'KeyM';
+
+/** The modifier state of a key press. */
+export interface KeyChord {
+  readonly code: string;
+  readonly ctrlKey: boolean;
+  readonly metaKey: boolean;
+  readonly altKey: boolean;
+}
+
+/**
+ * Whether a key press belongs to the browser (Ctrl+R, Alt+Tab, ...) rather
+ * than the game. During play Ctrl is itself a game key (turn anticlockwise),
+ * so Ctrl still down when a game key goes down is a roll from one to the
+ * other, and the game keeps it.
+ */
+export function isBrowserShortcut(chord: KeyChord, playing: boolean): boolean {
+  if (chord.metaKey || chord.altKey) {
+    return true;
+  }
+  if (!chord.ctrlKey || chord.code.startsWith('Control')) {
+    return false;
+  }
+  return !(playing && gameActionFor(chord.code) !== null);
+}

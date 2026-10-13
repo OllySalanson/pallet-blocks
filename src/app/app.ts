@@ -26,7 +26,7 @@ import {
   sortScores,
   type ScoreEntry,
 } from './highScores';
-import { gameActionFor, isMuteKey, isPauseKey, menuKeyFor, type MenuKey } from './keys';
+import { gameActionFor, isBrowserShortcut, isMuteKey, isPauseKey, menuKeyFor, type MenuKey } from './keys';
 import {
   CURTAIN_HOLD_MS,
   CURTAIN_ROW_MS,
@@ -687,7 +687,7 @@ export class PalletBlocksApp {
   private readonly onKeyDown = (event: KeyboardEvent): void => {
     // Keys pressed in the game are the game's: a host page never sees them.
     event.stopPropagation();
-    if (event.metaKey || event.altKey || (event.ctrlKey && !event.code.startsWith('Control'))) {
+    if (isBrowserShortcut(event, this.isLive())) {
       return;
     }
     this.sfx.unlock();
