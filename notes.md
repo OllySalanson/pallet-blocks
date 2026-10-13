@@ -85,3 +85,9 @@ One short section per iteration: what a player saw, what changed, and how a play
 - Seen: on seed 7, holding Down (soft drop) and pressing Esc opened the pause menu, but the key's auto-repeat went on moving the cursor through RESUME, RESTART and QUIT. When the player let go it was on RESTART, so the Enter or Space meant to resume threw the game away. Holding a direction into the GAME OVER window did the same.
 - Changed: `FreshKeys` in `src/app/keys.ts` remembers which keys went down since the screen last changed. A menu ignores the repeats of a key that was already down when it opened; a key pressed in the menu still repeats as before.
 - How a player notices: pause while soft dropping and the cursor stays on RESUME until you press a key in the menu.
+
+## Closing the game left a dark, focusable box on the host page
+
+- Seen: on the embed page, a game mounted into a box and then closed with `destroy()` left the box with `tabindex="0"`, `role="application"`, the game's aria-label, a dark background over the host's own, and its focus outline turned off. The README says `destroy()` leaves the element as it found it. A keyboard player tabbing through the host page landed on an empty box with no focus ring, and a screen reader still called it the game.
+- Changed: `borrowElement` in `src/app/borrow.ts` notes the host element's class, attributes and inline styles before the game sets its own, and the game puts them all back on `destroy()`. The game now sets CSS longhands only, so putting a style back cannot wipe a host's own setting.
+- How a player notices: once the console closes, Tab skips the empty box, and the host's own look comes back.

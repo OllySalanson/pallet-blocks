@@ -14,6 +14,7 @@ import {
 } from '../render/scene';
 import { LETTERBOX } from '../render/palette';
 import { bannerForLevel, bannerForLock, describeLock, type Banner } from './callouts';
+import { borrowElement } from './borrow';
 import { advance, frameDelta } from './clock';
 import {
   LocalScores,
@@ -125,6 +126,8 @@ export class PalletBlocksApp {
   private readonly sfx: Sfx;
   private readonly localScores: LocalScores;
   private readonly resizeObserver: ResizeObserver | null;
+  /** Puts the host's element back as it was before the game was mounted. */
+  private readonly giveBack: () => void;
   private renderer: SceneRenderer | null = null;
 
   private current: Screen = { kind: 'title', cursor: 0 };
@@ -166,20 +169,26 @@ export class PalletBlocksApp {
     this.table = this.localScores.load();
     this.lastName = readString(LAST_NAME_KEY) ?? '';
 
-    root.classList.add('pallet-blocks');
-    root.tabIndex = 0;
-    root.setAttribute('role', 'application');
-    root.setAttribute('aria-label', 'Pallet Blocks, a falling-blocks puzzle game');
-    Object.assign(root.style, {
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      overflow: 'hidden',
-      outline: 'none',
-      background: LETTERBOX,
-      userSelect: 'none',
-      touchAction: 'none',
-    } satisfies Partial<CSSStyleDeclaration>);
+    this.giveBack = borrowElement(root, {
+      className: 'pallet-blocks',
+      attributes: {
+        tabindex: '0',
+        role: 'application',
+        'aria-label': 'Pallet Blocks, a falling-blocks puzzle game',
+      },
+      style: {
+        display: 'flex',
+        'align-items': 'center',
+        'justify-content': 'center',
+        'overflow-x': 'hidden',
+        'overflow-y': 'hidden',
+        'outline-style': 'none',
+        'background-color': LETTERBOX,
+        'background-image': 'none',
+        'user-select': 'none',
+        'touch-action': 'none',
+      },
+    });
 
     this.display = document.createElement('canvas');
     this.display.style.display = 'block';
@@ -267,7 +276,7 @@ export class PalletBlocksApp {
     this.resizeObserver?.disconnect();
     this.sfx.close();
     this.display.remove();
-    this.root.classList.remove('pallet-blocks');
+    this.giveBack();
   }
 
   // --- The loop ----------------------------------------------------------------
