@@ -157,3 +157,9 @@ One short section per iteration: what a player saw, what changed, and how a play
 - Seen: on seed 7 the first S is on show during READY, but tapping C (hold) and X (turn) before GO did nothing: at GO the S was still in play, unturned, with HOLD empty. Since a mid-game pause now resumes through READY, this also caught players who planned their next move while the countdown ran.
 - Changed: `Game` in `src/core/game.ts` has `pressLater` and `applyPressedLater`, which keep a hold and the net turns the same way presses during a line clear are kept. The app keeps them during READY and applies them at GO (`src/app/app.ts`); if lines are still clearing then, they wait for the next piece. A hard drop pressed early is still ignored.
 - How a player notices: a hold or turn tapped during READY happens the moment GO comes up, so the first piece can be swapped or turned before it starts to fall.
+
+## Muting let a jingle play on
+
+- Seen: on seed 7, pressing M the moment the stack topped out turned the title bar to SOUND OFF, but the GAME OVER tune played on for over a second. Measured at the speakers, 45 of the 57 samples in the 1.4s after M were still loud. A level-up jingle, which is scheduled a moment after its clear, kept playing in the same way.
+- Changed: `Sfx` in `src/audio/sfx.ts` sends every sound through a master volume node. Muting now unplugs that node and puts in a fresh one, so notes that are still sounding or due are cut at once, and sounds made after sound is turned back on still play. Behavioural tests are in `src/audio/sfx.test.ts`.
+- How a player notices: M (or SOUND on the title) goes silent the moment it is pressed, even halfway through a tune.
