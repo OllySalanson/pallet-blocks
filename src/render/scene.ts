@@ -575,14 +575,13 @@ export class SceneRenderer {
     this.divider(box, box.y + 35);
     this.text('ENTER YOUR NAME', centre, box.y + 40, { color: INK_SOFT, align: 'center' });
 
-    const field = { x: centre - 46, y: box.y + 54, width: 92, height: 18 };
+    const field = { x: centre - NAME_FIELD_WIDTH / 2, y: box.y + 54, width: NAME_FIELD_WIDTH, height: 18 };
     this.window(field, CREAM_LIT);
-    const textWidth = this.font.measure(name);
-    const textX = Math.floor(centre - textWidth / 2);
+    const { textX, caretX } = nameLine(centre, this.font.measure(name));
     this.text(name, textX, field.y + 5, { color: INK });
     if (Math.floor(state.nowMs / 400) % 2 === 0) {
       this.ctx.fillStyle = INK;
-      this.ctx.fillRect(textX + textWidth + (name ? 2 : 0), field.y + 4, 1, this.font.capHeight + 1);
+      this.ctx.fillRect(caretX, field.y + 4, 1, this.font.capHeight + 1);
     }
   }
 
@@ -776,6 +775,21 @@ export const FOCUS_HINT = 'CLICK HERE TO PLAY';
 
 /** The least room between a name and its score in a table row. */
 const NAME_SCORE_GAP = 4;
+
+/** The name entry box: room for the widest name (ten Ws, 79px) and its caret, with space either side. */
+export const NAME_FIELD_WIDTH = 98;
+/** Room between the last letter of a name and the caret. */
+const CARET_GAP = 2;
+
+/**
+ * Where a name being typed and its caret go. The two are centred together, so
+ * a long name keeps as much room after the caret as before its first letter.
+ */
+export function nameLine(centre: number, textWidth: number): { textX: number; caretX: number } {
+  const gap = textWidth > 0 ? CARET_GAP : 0;
+  const textX = Math.floor(centre - (textWidth + gap + 1) / 2);
+  return { textX, caretX: textX + textWidth + gap };
+}
 
 /** A name cut short, with a dot to say so, when it would run into its score. */
 export function fitName(name: string, maxWidth: number, measure: (text: string) => number): string {

@@ -61,3 +61,9 @@ One short section per iteration: what a player saw, what changed, and how a play
 - Seen: the title screen's HIGH SCORES box is narrow, and a name sits at its left with the score pushed to its right. A ten-letter name of wide letters (WWWWWWWWWW) left only a pixel or two before a 3-digit score, and next to a score in the millions the two ran into each other and could not be read.
 - Changed: `fitName` in `src/render/scene.ts` cuts a name that would come within 4px of its score and ends it with a dot. Names that fit are drawn as they are, and the wider GAME OVER table is unchanged.
 - How a player notices: a long name beside a big score shows as, say, WWWWWWW. 1,234,567, with a clear gap, so every row of the table can be read.
+
+## The caret pressed against the name box
+
+- Seen: on seed 7, after a new high score, typing a ten-letter name of wide letters (WWWWWWWWWW) left the caret touching the right edge of the name box, while there was a clear gap before the first letter. Only the name was centred, not the caret after it.
+- Changed: `nameLine` in `src/render/scene.ts` centres the name and its caret together, and the box is a little wider (`NAME_FIELD_WIDTH`), so even the widest name has the same room on both sides.
+- How a player notices: however long the name, the text and blinking caret sit evenly in the box, and an empty box shows the caret in the middle.

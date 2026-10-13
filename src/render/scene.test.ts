@@ -6,6 +6,8 @@ import {
   formatScore,
   formatTime,
   helpFor,
+  NAME_FIELD_WIDTH,
+  nameLine,
   piecesShown,
   rowOffset,
   topRowShown,
@@ -42,6 +44,34 @@ describe('names in a table', () => {
 
   it('never leaves a space before the dot', () => {
     expect(fitName('ASH KETCHUM', 25, measure)).toBe('ASH.');
+  });
+});
+
+describe('name entry', () => {
+  const centre = 128;
+  const left = centre - NAME_FIELD_WIDTH / 2;
+  const right = left + NAME_FIELD_WIDTH - 1;
+  // Gaps inside the one-pixel frame, before the first letter and after the caret.
+  const gaps = (textWidth: number) => {
+    const { textX, caretX } = nameLine(centre, textWidth);
+    return { before: textX - (left + 1), after: right - 1 - caretX };
+  };
+
+  it('puts the caret in the middle of an empty box', () => {
+    const { before, after } = gaps(0);
+    expect(Math.abs(before - after)).toBeLessThanOrEqual(1);
+  });
+
+  it('keeps the caret clear of the frame for the widest name', () => {
+    // Ten Ws is 79px in the pixel font, the widest name there can be.
+    const { before, after } = gaps(79);
+    expect(after).toBeGreaterThanOrEqual(6);
+    expect(Math.abs(before - after)).toBeLessThanOrEqual(1);
+  });
+
+  it('leaves a gap between the last letter and the caret', () => {
+    const { textX, caretX } = nameLine(centre, 20);
+    expect(caretX - (textX + 20)).toBe(2);
   });
 });
 
