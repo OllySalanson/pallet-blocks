@@ -3,7 +3,12 @@ export type Screen =
   | { readonly kind: 'title'; readonly cursor: number }
   | { readonly kind: 'ready'; readonly elapsedMs: number }
   | { readonly kind: 'playing' }
-  | { readonly kind: 'paused'; readonly cursor: number }
+  | {
+      readonly kind: 'paused';
+      readonly cursor: number;
+      /** How far into READY and GO! the pause came, or null if play had begun. */
+      readonly readyElapsedMs: number | null;
+    }
   | { readonly kind: 'toppingOut'; readonly elapsedMs: number }
   | { readonly kind: 'nameEntry'; readonly name: string }
   | { readonly kind: 'results'; readonly cursor: number; readonly rank: number };
@@ -20,6 +25,18 @@ export const PAUSE_ITEMS = ['RESUME', 'RESTART', 'QUIT'] as const;
 export const RESULT_ITEMS = ['PLAY AGAIN', 'TITLE'] as const;
 
 export const MAX_START_LEVEL = 15;
+
+/** The pause menu over a live screen, remembering a countdown it interrupted. */
+export function pauseOver(screen: Screen): Screen {
+  return { kind: 'paused', cursor: 0, readyElapsedMs: screen.kind === 'ready' ? screen.elapsedMs : null };
+}
+
+/** Where RESUME goes: back into the countdown if the pause cut it short, else straight to play. */
+export function resumeFrom(paused: Extract<Screen, { kind: 'paused' }>): Screen {
+  return paused.readyElapsedMs === null
+    ? { kind: 'playing' }
+    : { kind: 'ready', elapsedMs: paused.readyElapsedMs };
+}
 
 /** Moves a menu cursor, wrapping at both ends. */
 export function moveCursor(cursor: number, by: number, count: number): number {

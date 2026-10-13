@@ -44,6 +44,8 @@ import {
   READY_MS,
   RESULT_ITEMS,
   moveCursor,
+  pauseOver,
+  resumeFrom,
   stepLevel,
   type Screen,
   type TitleItem,
@@ -216,14 +218,14 @@ export class PalletBlocksApp {
   pause(): void {
     if (this.isLive()) {
       this.game?.releaseAll();
-      this.screen = { kind: 'paused', cursor: 0 };
+      this.screen = pauseOver(this.screen);
       this.sfx.play('pause');
     }
   }
 
   resume(): void {
     if (this.screen.kind === 'paused') {
-      this.toPlaying();
+      this.toPlaying(this.screen);
       this.sfx.play('pause');
     }
   }
@@ -560,9 +562,12 @@ export class PalletBlocksApp {
     void this.refreshLeaderboard();
   }
 
-  private toPlaying(): void {
-    this.screen = { kind: 'playing' };
-    this.pressHeld();
+  private toPlaying(paused: Extract<Screen, { kind: 'paused' }>): void {
+    this.screen = resumeFrom(paused);
+    // Before GO, the held keys wait for it.
+    if (this.acceptsGameInput()) {
+      this.pressHeld();
+    }
   }
 
   /** Move and soft-drop keys held while the game could not take them act now. */
@@ -634,15 +639,16 @@ export class PalletBlocksApp {
     }
   }
 
-  private pausedKey(key: MenuKey, cursor: number): void {
+  private pausedKey(key: MenuKey, paused: Extract<Screen, { kind: 'paused' }>): void {
+    const cursor = paused.cursor;
     if (key === 'up' || key === 'down') {
-      this.screen = { kind: 'paused', cursor: moveCursor(cursor, key === 'up' ? -1 : 1, PAUSE_ITEMS.length) };
+      this.screen = { ...paused, cursor: moveCursor(cursor, key === 'up' ? -1 : 1, PAUSE_ITEMS.length) };
       this.sfx.play('menuMove');
     } else if (key === 'confirm') {
       const item = PAUSE_ITEMS[cursor];
       this.sfx.play('menuSelect');
       if (item === 'RESUME') {
-        this.toPlaying();
+        this.toPlaying(paused);
       } else if (item === 'RESTART') {
         this.startGame();
       } else {
@@ -766,7 +772,7 @@ export class PalletBlocksApp {
         this.titleKey(key, screen.cursor);
         break;
       case 'paused':
-        this.pausedKey(key, screen.cursor);
+        this.pausedKey(key, screen);
         break;
       case 'results':
         // Only Enter chooses here: Space and Z are the keys a player is most
