@@ -56,3 +56,14 @@ export function moveCursor(cursor: number, by: number, count: number): number {
 export function stepLevel(level: number, by: number): number {
   return Math.min(MAX_START_LEVEL, Math.max(1, level + by));
 }
+
+/**
+ * The level the LEVEL option shows when the game opens: the host's choice if it
+ * made one, else the one this browser last picked, else 1. A saved value that
+ * is not a whole level in range is ignored or clamped.
+ */
+export function initialStartLevel(option: number | undefined, saved: string | null): number {
+  const savedLevel = saved === null || saved.trim() === '' ? NaN : Number(saved);
+  const level = option ?? (Number.isFinite(savedLevel) ? savedLevel : 1);
+  return stepLevel(Math.floor(level), 0);
+}

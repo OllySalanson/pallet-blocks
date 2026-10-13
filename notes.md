@@ -109,3 +109,9 @@ One short section per iteration: what a player saw, what changed, and how a play
 - Seen: on seed 7, a piece soft-dropped onto the floor sat there in its full colour for the whole half-second lock delay and then locked with no warning. A player sliding a piece along the stack (or at 20G, where every piece lands at once) had to guess how much time was left, and how many of the 15 resets they had used.
 - Changed: the core `Game` reports `lockProgress`, from 0 as the piece touches down or is moved to 1 as it locks, and 0 while it falls. The renderer lays the well's dark over the resting piece in three steps (`lockShade` in `src/render/scene.ts`). In the browser the S piece went from 240,196,84 to 206, 170 and then 137 red about 125ms apart, then gave the cream lock flash.
 - How a player notices: a piece on the stack dims as its lock comes. Moving or turning it brings the colour back, which shows the reset worked.
+
+## The start level was forgotten on every visit
+
+- Seen: on seed 7, stepping LEVEL to 5 on the title screen and reloading the page brought the menu back on LEVEL 1, while SOUND OFF from the same visit was kept. A player who always starts on a higher level had to step it up again each time they came back.
+- Changed: the LEVEL choice is saved in this browser (`pallet-blocks:start-level`) whenever it changes, and read back on opening through `initialStartLevel` in `src/app/screens.ts`. A host's `startLevel` option still wins, and a saved value that is not a level is ignored or clamped to 1 to 15.
+- How a player notices: pick LEVEL 5 once and the menu opens on LEVEL 5 next time, the same way it keeps SOUND OFF.

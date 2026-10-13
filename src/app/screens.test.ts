@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { CALLOUT_MS } from '../render/scene';
-import { READY_MS, pauseOver, resumeFrom, stepEffectsClock, type Screen } from './screens';
+import {
+  MAX_START_LEVEL,
+  READY_MS,
+  initialStartLevel,
+  pauseOver,
+  resumeFrom,
+  stepEffectsClock,
+  type Screen,
+} from './screens';
 
 function pausedOver(screen: Screen) {
   const paused = pauseOver(screen);
@@ -58,5 +66,27 @@ describe('effects over a pause', () => {
     ] as const) {
       expect(run(0, screen, 120)).toBeGreaterThan(CALLOUT_MS);
     }
+  });
+});
+
+describe('the start level on opening', () => {
+  it('starts on 1 in a browser that has never picked one', () => {
+    expect(initialStartLevel(undefined, null)).toBe(1);
+  });
+
+  it('comes back on the level this browser last picked', () => {
+    expect(initialStartLevel(undefined, '5')).toBe(5);
+  });
+
+  it('lets the host choose over the saved level', () => {
+    expect(initialStartLevel(3, '5')).toBe(3);
+  });
+
+  it('ignores a saved level that is not a number, and clamps one out of range', () => {
+    expect(initialStartLevel(undefined, '')).toBe(1);
+    expect(initialStartLevel(undefined, 'five')).toBe(1);
+    expect(initialStartLevel(undefined, '0')).toBe(1);
+    expect(initialStartLevel(undefined, '99')).toBe(MAX_START_LEVEL);
+    expect(initialStartLevel(undefined, '7.6')).toBe(7);
   });
 });

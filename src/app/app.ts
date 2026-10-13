@@ -47,6 +47,7 @@ import {
   RESULT_ITEMS,
   moveCursor,
   pauseOver,
+  initialStartLevel,
   resumeFrom,
   stepEffectsClock,
   stepLevel,
@@ -90,7 +91,7 @@ export interface PalletBlocksOptions {
    * returning to the title screen.
    */
   readonly loadLeaderboard?: () => Promise<readonly LeaderboardEntry[]>;
-  /** The level the LEVEL option starts on, 1 to 15. */
+  /** The level the LEVEL option starts on, 1 to 15. Default: the one this browser last picked, else 1. */
   readonly startLevel?: number;
   /** Start with sound off. The player can still toggle it with M. */
   readonly muted?: boolean;
@@ -106,6 +107,7 @@ export interface PalletBlocksOptions {
 }
 
 const MUTED_KEY = 'pallet-blocks:muted';
+const START_LEVEL_KEY = 'pallet-blocks:start-level';
 const LAST_NAME_KEY = 'pallet-blocks:last-name';
 const SOFT_DROP_SOUND_GAP_MS = 45;
 const AFTER_GAME_INPUT_GUARD_MS = 700;
@@ -164,7 +166,7 @@ export class PalletBlocksApp {
   constructor(root: HTMLElement, options: PalletBlocksOptions = {}) {
     this.root = root;
     this.options = options;
-    this.startLevel = stepLevel(Math.floor(options.startLevel ?? 1), 0);
+    this.startLevel = initialStartLevel(options.startLevel, readString(START_LEVEL_KEY));
     this.sfx = new Sfx(options.muted ?? readFlag(MUTED_KEY));
     this.localScores = new LocalScores(options.storageKey ?? STORAGE_KEY);
     this.table = this.localScores.load();
@@ -652,7 +654,7 @@ export class PalletBlocksApp {
       if (item === 'level') {
         const next = stepLevel(this.startLevel, key === 'left' ? -1 : 1);
         if (next !== this.startLevel) {
-          this.startLevel = next;
+          this.setStartLevel(next);
           this.sfx.play('menuMove');
         }
       } else if (item === 'sound') {
@@ -663,7 +665,7 @@ export class PalletBlocksApp {
         this.sfx.play('menuSelect');
         this.startGame();
       } else if (item === 'level') {
-        this.startLevel = this.startLevel >= MAX_START_LEVEL ? 1 : this.startLevel + 1;
+        this.setStartLevel(this.startLevel >= MAX_START_LEVEL ? 1 : this.startLevel + 1);
         this.sfx.play('menuMove');
       } else if (item === 'sound') {
         this.toggleMute();
@@ -738,6 +740,12 @@ export class PalletBlocksApp {
       return true;
     }
     return false;
+  }
+
+  /** The LEVEL choice is kept in this browser, like the sound setting, for next time. */
+  private setStartLevel(level: number): void {
+    this.startLevel = level;
+    writeString(START_LEVEL_KEY, String(level));
   }
 
   private toggleMute(): void {
