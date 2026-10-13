@@ -67,3 +67,9 @@ One short section per iteration: what a player saw, what changed, and how a play
 - Seen: on seed 7, after a new high score, typing a ten-letter name of wide letters (WWWWWWWWWW) left the caret touching the right edge of the name box, while there was a clear gap before the first letter. Only the name was centred, not the caret after it.
 - Changed: `nameLine` in `src/render/scene.ts` centres the name and its caret together, and the box is a little wider (`NAME_FIELD_WIDTH`), so even the widest name has the same room on both sides.
 - How a player notices: however long the name, the text and blinking caret sit evenly in the box, and an empty box shows the caret in the middle.
+
+## A new high score below sixth place was nowhere to be seen
+
+- Seen: the high score table keeps ten names, but the GAME OVER window only has room for six. On seed 7, with six scores above 204 already saved, the game said NEW HIGH SCORE!, took the name RED, and then showed a results table without it: no row, no highlight, as if the score had not been kept.
+- Changed: `tableRows` in `src/render/scene.ts` picks the rows the results window shows. When the player's entry ranks below the top rows, it takes the last row, numbered with its real place and highlighted. The same goes for a host's leaderboard in the embed.
+- How a player notices: place seventh to tenth and the results show the top five, then your own name with its place (say 7) blinking in gold.

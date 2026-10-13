@@ -610,18 +610,17 @@ export class SceneRenderer {
     this.divider(box, box.y + 54);
 
     this.text(state.tableTitle, centre, box.y + 59, { color: RED, align: 'center' });
-    const rows = state.table.slice(0, 6);
+    const rows = tableRows(state.table, state.highlight, RESULT_ROWS);
     if (rows.length === 0) {
       this.text('NO SCORES YET', centre, box.y + 86, { color: INK_SOFT, align: 'center' });
     }
-    rows.forEach((entry, i) => {
+    rows.forEach(({ entry, rank, mine }, i) => {
       const y = box.y + 73 + i * 11;
-      const mine = i === state.highlight;
       if (mine) {
         this.ctx.fillStyle = Math.floor(state.nowMs / 300) % 2 === 0 ? GOLD : CREAM_DIM;
         this.ctx.fillRect(box.x + 4, y - 2, box.width - 8, 11);
       }
-      this.text(`${i + 1}`, left + 8, y, { color: INK_SOFT, align: 'right' });
+      this.text(`${rank}`, left + 8, y, { color: INK_SOFT, align: 'right' });
       this.text(entry.name, left + 16, y, { color: INK });
       this.text(formatScore(entry.score), right, y, { color: INK, align: 'right' });
     });
@@ -803,6 +802,30 @@ export function fitName(name: string, maxWidth: number, measure: (text: string) 
     }
   }
   return '';
+}
+
+/** How many rows of the table the GAME OVER window has room for. */
+export const RESULT_ROWS = 6;
+
+export interface TableRow {
+  readonly entry: ScoreEntry;
+  /** The place in the table, from 1. */
+  readonly rank: number;
+  readonly mine: boolean;
+}
+
+/**
+ * The rows of a table to show: the top ones, but when the player's own entry
+ * (`highlight`, -1 for none) ranks below them, it takes the last row, so a
+ * player who has just made the table always sees where.
+ */
+export function tableRows(table: readonly ScoreEntry[], highlight: number, count: number): TableRow[] {
+  const rows = table.slice(0, count).map((entry, i) => ({ entry, rank: i + 1, mine: i === highlight }));
+  const mine = table[highlight];
+  if (highlight >= count && mine && rows.length > 0) {
+    rows[rows.length - 1] = { entry: mine, rank: highlight + 1, mine: true };
+  }
+  return rows;
 }
 
 /** Minutes and seconds. */

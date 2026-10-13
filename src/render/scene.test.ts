@@ -9,7 +9,9 @@ import {
   NAME_FIELD_WIDTH,
   nameLine,
   piecesShown,
+  RESULT_ROWS,
   rowOffset,
+  tableRows,
   topRowShown,
 } from './scene';
 
@@ -44,6 +46,28 @@ describe('names in a table', () => {
 
   it('never leaves a space before the dot', () => {
     expect(fitName('ASH KETCHUM', 25, measure)).toBe('ASH.');
+  });
+});
+
+describe('results table', () => {
+  const table = Array.from({ length: 10 }, (_, i) => ({ name: `P${i + 1}`, score: 1000 - i * 100 }));
+
+  it('shows the top rows with their places when the player is among them', () => {
+    const rows = tableRows(table, 2, RESULT_ROWS);
+    expect(rows.map((row) => row.rank)).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(rows.filter((row) => row.mine).map((row) => row.entry.name)).toEqual(['P3']);
+  });
+
+  it('puts a player who placed below the top rows in the last row, with their own place', () => {
+    const rows = tableRows(table, 8, RESULT_ROWS);
+    expect(rows).toHaveLength(RESULT_ROWS);
+    expect(rows.map((row) => row.rank)).toEqual([1, 2, 3, 4, 5, 9]);
+    expect(rows[RESULT_ROWS - 1]).toEqual({ entry: table[8], rank: 9, mine: true });
+  });
+
+  it('shows just the top rows when the player did not make the table', () => {
+    expect(tableRows(table, -1, RESULT_ROWS).map((row) => row.rank)).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(tableRows([], -1, RESULT_ROWS)).toEqual([]);
   });
 });
 
