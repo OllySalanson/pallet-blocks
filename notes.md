@@ -115,3 +115,9 @@ One short section per iteration: what a player saw, what changed, and how a play
 - Seen: on seed 7, stepping LEVEL to 5 on the title screen and reloading the page brought the menu back on LEVEL 1, while SOUND OFF from the same visit was kept. A player who always starts on a higher level had to step it up again each time they came back.
 - Changed: the LEVEL choice is saved in this browser (`pallet-blocks:start-level`) whenever it changes, and read back on opening through `initialStartLevel` in `src/app/screens.ts`. A host's `startLevel` option still wins, and a saved value that is not a level is ignored or clamped to 1 to 15.
 - How a player notices: pick LEVEL 5 once and the menu opens on LEVEL 5 next time, the same way it keeps SOUND OFF.
+
+## Resuming dropped the player straight back into a falling piece
+
+- Seen: on seed 7, pausing with the first piece on row 3 and resuming 0.8s later put the board back and the piece fell to row 4 within the second, with no countdown. The pause menu hides the stack, HOLD and NEXT, so the player was moving a live piece before they had read the board again, which at the higher levels can cost a misplaced piece.
+- Changed: `resumeFrom` in `src/app/screens.ts` now sends a pause taken during play back through READY and GO!, as a new game starts. Keys held through the pause wait for GO, and a pause during the countdown still picks it up where it stopped.
+- How a player notices: RESUME, Esc, P or the embed's `resume()` show READY over the board, then GO! with its sound, and only then does the piece fall.

@@ -23,8 +23,8 @@ describe('pausing and resuming', () => {
     expect(pauseOver({ kind: 'playing' })).toMatchObject({ kind: 'paused', cursor: 0 });
   });
 
-  it('resumes a game in play straight into play', () => {
-    expect(resumeFrom(pausedOver({ kind: 'playing' }))).toEqual({ kind: 'playing' });
+  it('resumes a game in play through READY and GO! again, so the piece waits while the board is read', () => {
+    expect(resumeFrom(pausedOver({ kind: 'playing' }))).toEqual({ kind: 'ready', elapsedMs: 0 });
   });
 
   it('returns to READY where it left off when the pause came before GO', () => {

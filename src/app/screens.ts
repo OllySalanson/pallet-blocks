@@ -31,11 +31,13 @@ export function pauseOver(screen: Screen): Screen {
   return { kind: 'paused', cursor: 0, readyElapsedMs: screen.kind === 'ready' ? screen.elapsedMs : null };
 }
 
-/** Where RESUME goes: back into the countdown if the pause cut it short, else straight to play. */
+/**
+ * Where RESUME goes: back into the countdown where the pause cut it short, or,
+ * from play, through READY and GO! again. The pause hid the board, so the
+ * player gets a moment to read the stack before the piece moves.
+ */
 export function resumeFrom(paused: Extract<Screen, { kind: 'paused' }>): Screen {
-  return paused.readyElapsedMs === null
-    ? { kind: 'playing' }
-    : { kind: 'ready', elapsedMs: paused.readyElapsedMs };
+  return { kind: 'ready', elapsedMs: paused.readyElapsedMs ?? 0 };
 }
 
 /**

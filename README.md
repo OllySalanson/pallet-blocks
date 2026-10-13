@@ -80,7 +80,8 @@ also lettered across the well with their points, and so is each new level
 | Arrows, Enter       | Menus              |
 
 Holding left or right repeats after a short delay. The game pauses itself if it
-loses keyboard focus or the tab is hidden.
+loses keyboard focus or the tab is hidden. The pause hides the board, so play
+comes back through READY and GO! before the piece moves again.
 
 High scores are kept in this browser (top 10). When a score makes the table you
 are asked for a name: Enter saves it, Esc skips and the score is not kept.
