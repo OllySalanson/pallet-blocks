@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { formatScore, formatTime } from './scene';
+import { BUFFER_ROWS, VISIBLE_ROWS } from '../core/board';
+import { formatScore, formatTime, rowOffset } from './scene';
 
 describe('formatting', () => {
   it('groups score digits in threes', () => {
@@ -13,5 +14,21 @@ describe('formatting', () => {
     expect(formatTime(0)).toBe('0:00');
     expect(formatTime(61_500)).toBe('1:01');
     expect(formatTime(3_600_000)).toBe('60:00');
+  });
+});
+
+describe('rows on screen', () => {
+  it('draws the field rows top to bottom, a cell apart', () => {
+    expect(rowOffset(BUFFER_ROWS)).toBe(0);
+    expect(rowOffset(BUFFER_ROWS + VISIBLE_ROWS - 1)).toBe((VISIBLE_ROWS - 1) * 8);
+  });
+
+  it('shows the buffer row just above the field, where a high stack pushes a new piece', () => {
+    expect(rowOffset(BUFFER_ROWS - 1)).toBe(-8);
+  });
+
+  it('keeps the rest of the buffer out of sight', () => {
+    expect(rowOffset(BUFFER_ROWS - 2)).toBeNull();
+    expect(rowOffset(0)).toBeNull();
   });
 });

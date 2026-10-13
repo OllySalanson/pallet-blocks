@@ -25,3 +25,9 @@ One short section per iteration: what a player saw, what changed, and how a play
 - Seen: after a line clear the cleared rows flash for about a third of a second before the next piece appears. Hold or a turn pressed in that gap was thrown away. On seed 7, C pressed just after the clearing drop left HOLD empty and the next O came into play anyway.
 - Changed: `Game` in `src/core/game.ts` remembers a hold and the turns pressed while lines clear and applies them to the next piece as it appears: the hold first, then the turns, through the normal hold and kick rules.
 - How a player notices: press hold or turn for the next piece while the lines are still flashing, and it comes in already held or already turned, so fast play after a clear no longer loses inputs.
+
+## A piece pushed above the field by a high stack
+
+- Seen: when the stack reaches the top, a new piece appears one row higher, in the hidden row above the field, and that part of it was never drawn. On seed 7, hard dropping every piece in place, the last T showed as a flat bar of three with its nub missing, and the cells it locked up there stayed invisible.
+- Changed: the renderer (`rowOffset` in `src/render/scene.ts`) now draws the buffer row just above the field in the strip between the well and the title bar, for the falling piece, its ghost and locked cells. The game-over curtain greys that row too.
+- How a player notices: in a top-out scramble the whole piece stays visible, poking out above the well, so its shape and turns can still be read.

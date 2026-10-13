@@ -44,6 +44,17 @@ const FIELD_Y = WELL_FRAME.y + 3;
 const FIELD_WIDTH = BOARD_WIDTH * CELL;
 const FIELD_HEIGHT = VISIBLE_ROWS * CELL;
 
+/**
+ * The buffer row just above the field shows above the well, between it and the
+ * title bar, so a piece a high stack pushes up there is still seen whole.
+ */
+const PEEK_ROW = BUFFER_ROWS - 1;
+
+/** How far below the top of the field a board row is drawn, or null for a buffer row out of sight. */
+export function rowOffset(boardY: number): number | null {
+  return boardY >= PEEK_ROW ? (boardY - BUFFER_ROWS) * CELL : null;
+}
+
 const COLUMN_WIDTH = 74;
 const LEFT_X = 5;
 const RIGHT_X = SCREEN_WIDTH - 5 - COLUMN_WIDTH;
@@ -58,6 +69,8 @@ const BEST_BOX = { x: RIGHT_X, y: 149, width: COLUMN_WIDTH, height: 38 };
 export const CALLOUT_MS = 1800;
 /** Callouts and banners blink this long as they arrive, then hold steady. */
 const ARRIVAL_BLINK_MS = 240;
+/** The curtain greys the field and then the peeking row above it. */
+const CURTAIN_ALL_ROWS = VISIBLE_ROWS + 1;
 const LOCK_FLASH_MS = 90;
 const DROP_TRAIL_MS = 140;
 const DROP_BUMP_MS = 70;
@@ -304,16 +317,15 @@ export class SceneRenderer {
     const clearing = game.phase === 'clearing' ? new Set(game.clearingRows) : null;
     const clearProgress = clearing ? 1 - Math.max(0, game.clearTimerMs) / Math.max(1, game.clearDelayMs) : 0;
 
-    for (let row = 0; row < VISIBLE_ROWS; row += 1) {
-      const y = BUFFER_ROWS + row;
-      const greyed = VISIBLE_ROWS - row <= curtainRows;
+    for (let y = PEEK_ROW; y < BUFFER_ROWS + VISIBLE_ROWS; y += 1) {
+      const greyed = BUFFER_ROWS + VISIBLE_ROWS - y <= curtainRows;
       for (let x = 0; x < BOARD_WIDTH; x += 1) {
         const cell: CellValue = game.board.get(x, y);
         if (!cell) {
           continue;
         }
         const px = FIELD_X + x * CELL;
-        const py = fieldY + row * CELL;
+        const py = fieldY + rowOffset(y)!;
         if (clearing?.has(y)) {
           this.clearingCell(px, py, x, clearProgress, state.nowMs);
           continue;
@@ -334,19 +346,16 @@ export class SceneRenderer {
       const ghostY = game.ghostY();
       if (ghostY !== null && ghostY !== piece.y) {
         for (const [x, y] of pieceCells({ ...piece, y: ghostY })) {
-          if (y >= BUFFER_ROWS) {
-            this.ghost(FIELD_X + x * CELL, fieldY + (y - BUFFER_ROWS) * CELL, BLOCK_TONES[piece.kind]);
+          const offset = rowOffset(y);
+          if (offset !== null) {
+            this.ghost(FIELD_X + x * CELL, fieldY + offset, BLOCK_TONES[piece.kind]);
           }
         }
       }
       for (const [x, y] of pieceCells(piece)) {
-        if (y >= BUFFER_ROWS) {
-          this.block(
-            FIELD_X + x * CELL,
-            fieldY + (y - BUFFER_ROWS) * CELL,
-            BLOCK_TONES[piece.kind],
-            'normal',
-          );
+        const offset = rowOffset(y);
+        if (offset !== null) {
+          this.block(FIELD_X + x * CELL, fieldY + offset, BLOCK_TONES[piece.kind], 'normal');
         }
       }
     }
@@ -411,9 +420,9 @@ export class SceneRenderer {
 
   private curtainRows(screen: Screen): number {
     if (screen.kind === 'toppingOut') {
-      return Math.min(VISIBLE_ROWS, Math.floor(screen.elapsedMs / CURTAIN_ROW_MS));
+      return Math.min(CURTAIN_ALL_ROWS, Math.floor(screen.elapsedMs / CURTAIN_ROW_MS));
     }
-    return screen.kind === 'nameEntry' || screen.kind === 'results' ? VISIBLE_ROWS : 0;
+    return screen.kind === 'nameEntry' || screen.kind === 'results' ? CURTAIN_ALL_ROWS : 0;
   }
 
   /** A cleared row wipes out from the middle, flashing as it goes. */
