@@ -143,6 +143,12 @@ describe('help bar', () => {
     expect(helpFor({ kind: 'paused', cursor: 0, readyElapsedMs: null }, 0, true)).toContain('RESUME');
   });
 
+  it('warns on name entry that Esc skips saving the score', () => {
+    const help = helpFor({ kind: 'nameEntry', name: '' }, 0, true);
+    expect(help).toContain('ENTER SAVE');
+    expect(help).toContain('ESC SKIP');
+  });
+
   it('asks for a click on every screen once focus has gone to the host page', () => {
     expect(FOCUS_HINT).toBe('CLICK HERE TO PLAY');
     expect(helpFor({ kind: 'title', cursor: 0 }, 0, false)).toBe(FOCUS_HINT);

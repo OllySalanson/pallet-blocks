@@ -73,3 +73,9 @@ One short section per iteration: what a player saw, what changed, and how a play
 - Seen: the high score table keeps ten names, but the GAME OVER window only has room for six. On seed 7, with six scores above 204 already saved, the game said NEW HIGH SCORE!, took the name RED, and then showed a results table without it: no row, no highlight, as if the score had not been kept.
 - Changed: `tableRows` in `src/render/scene.ts` picks the rows the results window shows. When the player's entry ranks below the top rows, it takes the last row, numbered with its real place and highlighted. The same goes for a host's leaderboard in the embed.
 - How a player notices: place seventh to tenth and the results show the top five, then your own name with its place (say 7) blinking in gold.
+
+## Esc on the high score box threw the score away without warning
+
+- Seen: on seed 7, after NEW HIGH SCORE! 202, the help bar read TYPE YOUR NAME and ENTER DONE. Esc, the usual key for closing a box, quietly skipped the name, and the results said NO SCORES YET: the score was gone and nothing had said Esc would do that.
+- Changed: `helpFor` in `src/render/scene.ts` now gives name entry TYPE YOUR NAME, ENTER SAVE and ESC SKIP, and the README says Esc skips and the score is not kept.
+- How a player notices: the bar under the high score box says what each key does, so a player who wants the score kept knows to press Enter.

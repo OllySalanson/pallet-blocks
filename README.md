@@ -80,7 +80,7 @@ Holding left or right repeats after a short delay. The game pauses itself if it
 loses keyboard focus or the tab is hidden.
 
 High scores are kept in this browser (top 10). When a score makes the table you
-are asked for a name.
+are asked for a name: Enter saves it, Esc skips and the score is not kept.
 
 ## Embedding
 

@@ -850,7 +850,8 @@ export function helpFor(screen: Screen, nowMs: number, focused: boolean): string
     case 'toppingOut':
       return '';
     case 'nameEntry':
-      return 'TYPE YOUR NAME   ENTER DONE';
+      // Esc throws the score away, so the bar must say so.
+      return 'TYPE YOUR NAME   ENTER SAVE   ESC SKIP';
     case 'results':
       return 'ARROWS CHOOSE   ENTER SELECT';
   }
