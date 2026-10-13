@@ -45,6 +45,8 @@ export type GameEvent =
   | { readonly type: 'move' }
   | { readonly type: 'rotate'; readonly spin: SpinKind }
   | { readonly type: 'hold'; readonly kind: PieceKind }
+  /** Hold was pressed, but this piece has already used it. */
+  | { readonly type: 'holdRefused' }
   | { readonly type: 'softDrop' }
   | { readonly type: 'hardDrop'; readonly distance: number }
   | ({ readonly type: 'lock' } & LockResult)
@@ -160,6 +162,9 @@ export class Game {
 
   private readonly heldKeys = { left: false, right: false, softDrop: false };
   private shiftDirection: -1 | 0 | 1 = 0;
+  /** Turns and a hold pressed while lines clear (or before play starts), for when a piece can take them. */
+  private bufferedTurns = 0;
+  private bufferedHold = false;
   private dasTimerMs = 0;
   private arrTimerMs = 0;
 
@@ -188,6 +193,17 @@ export class Game {
 
   get isOver(): boolean {
     return this.phase === 'over';
+  }
+
+  /**
+   * How far a piece resting on the stack is through its lock delay, from 0 just
+   * after it touched down or was moved to 1 as it locks. 0 while it falls.
+   */
+  get lockProgress(): number {
+    if (this.phase !== 'falling' || !this.isGrounded()) {
+      return 0;
+    }
+    return Math.min(1, this.lockTimerMs / Math.max(1, this.lockDelayMs));
   }
 
   /** Where the current piece would land if hard dropped. */
@@ -227,14 +243,36 @@ export class Game {
         this.hardDrop();
         break;
       case 'rotateCW':
-        this.rotate(1);
-        break;
       case 'rotateCCW':
-        this.rotate(-1);
-        break;
       case 'hold':
-        this.hold();
+        if (this.phase === 'clearing') {
+          this.pressLater(action);
+        } else if (action === 'hold') {
+          this.hold();
+        } else {
+          this.rotate(action === 'rotateCW' ? 1 : -1);
+        }
         break;
+    }
+  }
+
+  /**
+   * Keeps a hold or turn for `applyPressedLater`, for presses made before the
+   * game can take them (during READY, say). Other actions are ignored: a hard
+   * drop kept for later would drop a piece the player has not looked at.
+   */
+  pressLater(action: GameAction): void {
+    if (action === 'hold') {
+      this.bufferedHold = true;
+    } else if (action === 'rotateCW' || action === 'rotateCCW') {
+      this.bufferedTurns += action === 'rotateCW' ? 1 : -1;
+    }
+  }
+
+  /** Applies what `pressLater` kept to the falling piece; during a clear it waits for the next one. */
+  applyPressedLater(): void {
+    if (this.phase === 'falling') {
+      this.applyBufferedInput();
     }
   }
 
@@ -442,7 +480,11 @@ export class Game {
 
   private hold(): void {
     const piece = this.piece;
-    if (!piece || !this.canHold || this.phase !== 'falling') {
+    if (!piece || this.phase !== 'falling') {
+      return;
+    }
+    if (!this.canHold) {
+      this.events.push({ type: 'holdRefused' });
       return;
     }
     const next = this.held ?? this.deal();
@@ -550,6 +592,28 @@ export class Game {
     this.clearingRows = [];
     this.phase = 'falling';
     this.spawn(this.deal());
+    this.applyBufferedInput();
+  }
+
+  /** What was pressed early acts on the piece: a hold first, then the turns. */
+  private applyBufferedInput(): void {
+    const hold = this.bufferedHold;
+    const turns = ((this.bufferedTurns % 4) + 4) % 4;
+    this.bufferedHold = false;
+    this.bufferedTurns = 0;
+    if (this.phase !== 'falling') {
+      return;
+    }
+    if (hold) {
+      this.hold();
+    }
+    if (turns === 3) {
+      this.rotate(-1);
+    } else {
+      for (let i = 0; i < turns; i += 1) {
+        this.rotate(1);
+      }
+    }
   }
 
   private lockedEntirelyAbove(piece: ActivePiece): boolean {

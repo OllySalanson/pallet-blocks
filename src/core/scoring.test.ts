@@ -6,6 +6,7 @@ import {
   isDifficultClear,
   levelFor,
   lockPoints,
+  nextLevelLines,
 } from './scoring';
 
 const base = { spin: 'none', level: 1, combo: 0, backToBack: false, perfectClear: false } as const;
@@ -67,6 +68,18 @@ describe('levels', () => {
     expect(levelFor(1, 10)).toBe(2);
     expect(levelFor(1, 95)).toBe(10);
     expect(levelFor(5, 12)).toBe(6);
+  });
+
+  it('names the line count where the next level comes', () => {
+    expect(nextLevelLines(0)).toBe(10);
+    expect(nextLevelLines(9)).toBe(10);
+    expect(nextLevelLines(10)).toBe(20);
+    expect(nextLevelLines(13)).toBe(20);
+    expect(nextLevelLines(95)).toBe(100);
+    for (const lines of [0, 7, 10, 19, 42]) {
+      expect(levelFor(3, nextLevelLines(lines))).toBe(levelFor(3, lines) + 1);
+      expect(levelFor(3, nextLevelLines(lines) - 1)).toBe(levelFor(3, lines));
+    }
   });
 
   it('falls one row a second at level 1 and gets faster every level', () => {

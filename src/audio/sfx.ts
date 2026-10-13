@@ -15,6 +15,7 @@ export type SoundName =
   | 'hardDrop'
   | 'lock'
   | 'hold'
+  | 'holdRefused'
   | 'clear1'
   | 'clear2'
   | 'clear3'
@@ -64,6 +65,8 @@ const SOUNDS: Readonly<Record<SoundName, { readonly notes: readonly Note[]; read
   },
   lock: { notes: [{ at: 0, freq: 196, dur: 0.05, type: 'triangle', vol: 0.55 }] },
   hold: { notes: arpeggio([76, 83], 0.045, 0.05, 'square', 0.25) },
+  // A low double knock: the hold is used up until the next piece.
+  holdRefused: { notes: arpeggio([43, 43], 0.06, 0.035, 'square', 0.22) },
   clear1: { notes: arpeggio([72, 79], 0.06, 0.08) },
   clear2: { notes: arpeggio([72, 76, 79], 0.055, 0.08) },
   clear3: { notes: arpeggio([72, 76, 79, 84], 0.05, 0.08) },
@@ -98,13 +101,26 @@ const SOUNDS: Readonly<Record<SoundName, { readonly notes: readonly Note[]; read
 };
 
 export class Sfx {
-  muted: boolean;
+  private isMuted: boolean;
   private context: AudioContext | null = null;
   private master: GainNode | null = null;
   private noiseBuffer: AudioBuffer | null = null;
 
   constructor(muted = false) {
-    this.muted = muted;
+    this.isMuted = muted;
+  }
+
+  get muted(): boolean {
+    return this.isMuted;
+  }
+
+  /** Muting also cuts what is still sounding or due, such as the end of a jingle. */
+  set muted(muted: boolean) {
+    if (muted && !this.isMuted && this.context && this.master) {
+      this.master.disconnect();
+      this.master = this.createMaster(this.context);
+    }
+    this.isMuted = muted;
   }
 
   /** Creates (or resumes) the audio context. Call from a user gesture. */
@@ -117,9 +133,7 @@ export class Sfx {
           return;
         }
         this.context = new Context();
-        this.master = this.context.createGain();
-        this.master.gain.value = MASTER_VOLUME;
-        this.master.connect(this.context.destination);
+        this.master = this.createMaster(this.context);
       }
       if (this.context.state === 'suspended') {
         void this.context.resume();
@@ -150,6 +164,14 @@ export class Sfx {
     void this.context?.close();
     this.context = null;
     this.master = null;
+  }
+
+  /** Every sound goes through the master volume, so dropping it silences them all. */
+  private createMaster(ctx: AudioContext): GainNode {
+    const master = ctx.createGain();
+    master.gain.value = MASTER_VOLUME;
+    master.connect(ctx.destination);
+    return master;
   }
 
   private tone(ctx: AudioContext, out: AudioNode, start: number, note: Note): void {

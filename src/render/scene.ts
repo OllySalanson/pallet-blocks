@@ -1,6 +1,7 @@
 import { BOARD_WIDTH, BUFFER_ROWS, VISIBLE_ROWS, type CellValue } from '../core/board';
 import { pieceCells, type Game } from '../core/game';
 import { shapeOf, type PieceKind } from '../core/pieces';
+import { nextLevelLines } from '../core/scoring';
 import type { Banner } from '../app/callouts';
 import type { ScoreEntry } from '../app/highScores';
 import { CURTAIN_ROW_MS, GO_MS, PAUSE_ITEMS, READY_MS, RESULT_ITEMS, type Screen } from '../app/screens';
@@ -44,6 +45,35 @@ const FIELD_Y = WELL_FRAME.y + 3;
 const FIELD_WIDTH = BOARD_WIDTH * CELL;
 const FIELD_HEIGHT = VISIBLE_ROWS * CELL;
 
+/**
+ * The buffer row just above the field shows above the well, between it and the
+ * title bar, so a piece a high stack pushes up there is still seen whole.
+ */
+const PEEK_ROW = BUFFER_ROWS - 1;
+
+/** How far below the top of the field a board row is drawn, or null for a buffer row out of sight. */
+export function rowOffset(boardY: number): number | null {
+  return boardY >= PEEK_ROW ? (boardY - BUFFER_ROWS) * CELL : null;
+}
+
+/**
+ * The top board row drawn on a screen. The results window covers the top of
+ * the well but not the strip above it, so there the buffer row is left out
+ * rather than poke out above the window as a stub.
+ */
+export function topRowShown(screen: Screen): number {
+  return screen.kind === 'results' ? BUFFER_ROWS : PEEK_ROW;
+}
+
+/**
+ * Whether the pieces are on show: the stack, the falling piece, HOLD and the
+ * NEXT queue. They are all hidden while paused, so a pause is not a free look
+ * at the board or a free moment to plan the queue.
+ */
+export function piecesShown(screen: Screen): boolean {
+  return screen.kind !== 'paused';
+}
+
 const COLUMN_WIDTH = 74;
 const LEFT_X = 5;
 const RIGHT_X = SCREEN_WIDTH - 5 - COLUMN_WIDTH;
@@ -58,9 +88,35 @@ const BEST_BOX = { x: RIGHT_X, y: 149, width: COLUMN_WIDTH, height: 38 };
 export const CALLOUT_MS = 1800;
 /** Callouts and banners blink this long as they arrive, then hold steady. */
 const ARRIVAL_BLINK_MS = 240;
+/** The curtain greys the field and then the peeking row above it. */
+const CURTAIN_ALL_ROWS = VISIBLE_ROWS + 1;
 const LOCK_FLASH_MS = 90;
 const DROP_TRAIL_MS = 140;
 const DROP_BUMP_MS = 70;
+/** A refused hold shakes the held piece side to side, a step every this long. */
+const HOLD_SHAKE_STEP_MS = 40;
+const HOLD_SHAKE = [-2, 2, -1, 1] as const;
+
+/** A piece resting on the stack darkens in these steps as its lock delay runs out. */
+const LOCK_SHADES = [0, 0.15, 0.3, 0.45] as const;
+
+/**
+ * How much of the well's dark is laid over a piece `progress` (0 to 1) through
+ * its lock delay: none while it has time, more as the lock comes, so a player
+ * sliding a piece along the stack can see how long is left.
+ */
+export function lockShade(progress: number): number {
+  const step = Math.floor(Math.min(Math.max(progress, 0), 1) * LOCK_SHADES.length);
+  return LOCK_SHADES[Math.min(step, LOCK_SHADES.length - 1)]!;
+}
+
+/** How far the held piece is pushed sideways `elapsedMs` after a refused hold. */
+export function holdShakeOffset(elapsedMs: number): number {
+  if (elapsedMs < 0) {
+    return 0;
+  }
+  return HOLD_SHAKE[Math.floor(elapsedMs / HOLD_SHAKE_STEP_MS)] ?? 0;
+}
 
 interface Rect {
   readonly x: number;
@@ -96,7 +152,11 @@ export interface SceneState {
   readonly screen: Screen;
   readonly game: Game | null;
   readonly nowMs: number;
+  /** The clock callouts, banners, flashes and trails are timed by; it stands still while paused. */
+  readonly effectsMs: number;
   readonly muted: boolean;
+  /** Whether the game has keyboard focus. Without it, keys go to the host page. */
+  readonly focused: boolean;
   readonly playerName: string | null;
   readonly titleItems: readonly string[];
   readonly best: number;
@@ -108,6 +168,8 @@ export interface SceneState {
   readonly banner: ShownBanner | null;
   readonly trail: DropTrail | null;
   readonly flash: LockFlash | null;
+  /** When hold was last pressed for a piece that had already used it, or null. */
+  readonly holdRefusedAtMs: number | null;
 }
 
 const TITLE_TEXT: TextStyle = { color: TITLE_FILL, outline: TITLE_RIM, depth: { color: TITLE_DEPTH, px: 1 } };
@@ -140,7 +202,7 @@ export class SceneRenderer {
     }
 
     this.titleBar(state);
-    this.helpBar(helpFor(state));
+    this.helpBar(helpFor(state.screen, state.nowMs, state.focused));
   }
 
   // --- Chrome ----------------------------------------------------------------
@@ -192,8 +254,11 @@ export class SceneRenderer {
     }
     this.window(HOLD_BOX);
     this.heading('HOLD', HOLD_BOX);
-    if (game.held) {
-      this.previewPiece(game.held, HOLD_BOX.x, HOLD_BOX.y + 18, HOLD_BOX.width, 18, !game.canHold);
+    const shown = piecesShown(state.screen);
+    if (game.held && shown) {
+      const shake =
+        state.holdRefusedAtMs === null ? 0 : holdShakeOffset(state.effectsMs - state.holdRefusedAtMs);
+      this.previewPiece(game.held, HOLD_BOX.x + shake, HOLD_BOX.y + 18, HOLD_BOX.width, 18, !game.canHold);
     }
 
     this.stats(game, state);
@@ -201,14 +266,16 @@ export class SceneRenderer {
 
     this.window(NEXT_BOX);
     this.heading('NEXT', NEXT_BOX);
-    game.preview.forEach((kind, i) => {
-      this.previewPiece(kind, NEXT_BOX.x, NEXT_BOX.y + 18 + i * 21, NEXT_BOX.width, 18, false);
-    });
+    if (shown) {
+      game.preview.forEach((kind, i) => {
+        this.previewPiece(kind, NEXT_BOX.x, NEXT_BOX.y + 18 + i * 21, NEXT_BOX.width, 18, false);
+      });
+    }
 
     this.window(BEST_BOX);
     this.heading(state.tableTitle === 'LEADERBOARD' ? 'TOP SCORE' : 'BEST', BEST_BOX);
     this.text(
-      formatScore(Math.max(state.best, game.score)),
+      formatScore(bestShown(state.screen, state.best, game.score)),
       BEST_BOX.x + BEST_BOX.width - 6,
       BEST_BOX.y + 21,
       {
@@ -230,7 +297,7 @@ export class SceneRenderer {
     this.divider(box, box.y + 31);
     // While a new level is announced its row flashes: the speed has just gone up.
     const banner = state.banner?.kind === 'level' ? state.banner : null;
-    const sinceLevelUp = banner ? state.nowMs - banner.atMs : Infinity;
+    const sinceLevelUp = banner ? state.effectsMs - banner.atMs : Infinity;
     const levelLit = !!banner && sinceLevelUp < banner.durationMs && Math.floor(sinceLevelUp / 150) % 2 === 0;
     if (levelLit) {
       this.ctx.fillStyle = GOLD_WASH;
@@ -238,14 +305,20 @@ export class SceneRenderer {
     }
     this.text('LEVEL', left, box.y + 35, { color: levelLit ? RED : INK_SOFT });
     this.text(String(game.level), right, box.y + 35, { color: levelLit ? RED : INK, align: 'right' });
+    // LINES shows the count the next level comes at, so the player can see how close it is.
     this.text('LINES', left, box.y + 46, { color: INK_SOFT });
-    this.text(String(game.lines), right, box.y + 46, { color: INK, align: 'right' });
+    const goal = `/${nextLevelLines(game.lines)}`;
+    this.text(goal, right, box.y + 46, { color: INK_SOFT, align: 'right' });
+    this.text(String(game.lines), right - this.font.measure(goal) - 1, box.y + 46, {
+      color: INK,
+      align: 'right',
+    });
   }
 
   private callout(state: SceneState, game: Game): void {
     const box = CALLOUT_BOX;
     const callout = state.callout;
-    if (!callout || state.nowMs - callout.atMs > CALLOUT_MS) {
+    if (!callout || state.effectsMs - callout.atMs > CALLOUT_MS) {
       // Between callouts the panel keeps time.
       this.window(box);
       this.heading('TIME', box);
@@ -259,7 +332,7 @@ export class SceneRenderer {
       return;
     }
     this.window(box, CREAM_LIT);
-    if (isBlinkedOut(state.nowMs - callout.atMs)) {
+    if (isBlinkedOut(state.effectsMs - callout.atMs)) {
       return;
     }
     const centre = box.x + box.width / 2;
@@ -280,15 +353,14 @@ export class SceneRenderer {
   private well(state: SceneState, game: Game): void {
     const ctx = this.ctx;
     const screen = state.screen;
-    const bump = state.trail && state.nowMs - state.trail.atMs < DROP_BUMP_MS ? 1 : 0;
+    const bump = state.trail && state.effectsMs - state.trail.atMs < DROP_BUMP_MS ? 1 : 0;
     this.window({ ...WELL_FRAME, y: WELL_FRAME.y + bump });
     const fieldY = FIELD_Y + bump;
 
     ctx.fillStyle = WELL;
     ctx.fillRect(FIELD_X, fieldY, FIELD_WIDTH, FIELD_HEIGHT);
 
-    if (screen.kind === 'paused') {
-      // The stack is hidden while paused, so a pause is not a free look.
+    if (!piecesShown(screen)) {
       return;
     }
 
@@ -304,23 +376,22 @@ export class SceneRenderer {
     const clearing = game.phase === 'clearing' ? new Set(game.clearingRows) : null;
     const clearProgress = clearing ? 1 - Math.max(0, game.clearTimerMs) / Math.max(1, game.clearDelayMs) : 0;
 
-    for (let row = 0; row < VISIBLE_ROWS; row += 1) {
-      const y = BUFFER_ROWS + row;
-      const greyed = VISIBLE_ROWS - row <= curtainRows;
+    for (let y = topRowShown(screen); y < BUFFER_ROWS + VISIBLE_ROWS; y += 1) {
+      const greyed = BUFFER_ROWS + VISIBLE_ROWS - y <= curtainRows;
       for (let x = 0; x < BOARD_WIDTH; x += 1) {
         const cell: CellValue = game.board.get(x, y);
         if (!cell) {
           continue;
         }
         const px = FIELD_X + x * CELL;
-        const py = fieldY + row * CELL;
+        const py = fieldY + rowOffset(y)!;
         if (clearing?.has(y)) {
           this.clearingCell(px, py, x, clearProgress, state.nowMs);
           continue;
         }
         const flashing =
           state.flash &&
-          state.nowMs - state.flash.atMs < LOCK_FLASH_MS &&
+          state.effectsMs - state.flash.atMs < LOCK_FLASH_MS &&
           state.flash.cells.some(([fx, fy]) => fx === x && fy === y);
         this.block(px, py, BLOCK_TONES[greyed ? 'G' : cell], flashing ? 'flash' : 'normal');
       }
@@ -334,25 +405,29 @@ export class SceneRenderer {
       const ghostY = game.ghostY();
       if (ghostY !== null && ghostY !== piece.y) {
         for (const [x, y] of pieceCells({ ...piece, y: ghostY })) {
-          if (y >= BUFFER_ROWS) {
-            this.ghost(FIELD_X + x * CELL, fieldY + (y - BUFFER_ROWS) * CELL, BLOCK_TONES[piece.kind]);
+          const offset = rowOffset(y);
+          if (offset !== null) {
+            this.ghost(FIELD_X + x * CELL, fieldY + offset, BLOCK_TONES[piece.kind]);
           }
         }
       }
+      const shade = lockShade(game.lockProgress);
       for (const [x, y] of pieceCells(piece)) {
-        if (y >= BUFFER_ROWS) {
-          this.block(
-            FIELD_X + x * CELL,
-            fieldY + (y - BUFFER_ROWS) * CELL,
-            BLOCK_TONES[piece.kind],
-            'normal',
-          );
+        const offset = rowOffset(y);
+        if (offset !== null) {
+          this.block(FIELD_X + x * CELL, fieldY + offset, BLOCK_TONES[piece.kind], 'normal');
+          if (shade > 0) {
+            ctx.fillStyle = WELL;
+            ctx.globalAlpha = shade;
+            ctx.fillRect(FIELD_X + x * CELL, fieldY + offset, CELL, CELL);
+            ctx.globalAlpha = 1;
+          }
         }
       }
     }
 
     if (live && state.banner) {
-      this.banner(state.banner, state.nowMs, fieldY);
+      this.banner(state.banner, state.effectsMs, fieldY);
     }
 
     if (screen.kind === 'ready') {
@@ -368,8 +443,8 @@ export class SceneRenderer {
   }
 
   /** A big moment across the middle of the well: lettering only, so the stack shows through around it. */
-  private banner(banner: ShownBanner, nowMs: number, fieldY: number): void {
-    const age = nowMs - banner.atMs;
+  private banner(banner: ShownBanner, effectsMs: number, fieldY: number): void {
+    const age = effectsMs - banner.atMs;
     if (age >= banner.durationMs || isBlinkedOut(age)) {
       return;
     }
@@ -411,9 +486,9 @@ export class SceneRenderer {
 
   private curtainRows(screen: Screen): number {
     if (screen.kind === 'toppingOut') {
-      return Math.min(VISIBLE_ROWS, Math.floor(screen.elapsedMs / CURTAIN_ROW_MS));
+      return Math.min(CURTAIN_ALL_ROWS, Math.floor(screen.elapsedMs / CURTAIN_ROW_MS));
     }
-    return screen.kind === 'nameEntry' || screen.kind === 'results' ? VISIBLE_ROWS : 0;
+    return screen.kind === 'nameEntry' || screen.kind === 'results' ? CURTAIN_ALL_ROWS : 0;
   }
 
   /** A cleared row wipes out from the middle, flashing as it goes. */
@@ -432,7 +507,7 @@ export class SceneRenderer {
     if (!trail) {
       return;
     }
-    const age = state.nowMs - trail.atMs;
+    const age = state.effectsMs - trail.atMs;
     if (age >= DROP_TRAIL_MS) {
       return;
     }
@@ -542,14 +617,13 @@ export class SceneRenderer {
     this.divider(box, box.y + 35);
     this.text('ENTER YOUR NAME', centre, box.y + 40, { color: INK_SOFT, align: 'center' });
 
-    const field = { x: centre - 46, y: box.y + 54, width: 92, height: 18 };
+    const field = { x: centre - NAME_FIELD_WIDTH / 2, y: box.y + 54, width: NAME_FIELD_WIDTH, height: 18 };
     this.window(field, CREAM_LIT);
-    const textWidth = this.font.measure(name);
-    const textX = Math.floor(centre - textWidth / 2);
+    const { textX, caretX } = nameLine(centre, this.font.measure(name));
     this.text(name, textX, field.y + 5, { color: INK });
     if (Math.floor(state.nowMs / 400) % 2 === 0) {
       this.ctx.fillStyle = INK;
-      this.ctx.fillRect(textX + textWidth + (name ? 2 : 0), field.y + 4, 1, this.font.capHeight + 1);
+      this.ctx.fillRect(caretX, field.y + 4, 1, this.font.capHeight + 1);
     }
   }
 
@@ -578,18 +652,17 @@ export class SceneRenderer {
     this.divider(box, box.y + 54);
 
     this.text(state.tableTitle, centre, box.y + 59, { color: RED, align: 'center' });
-    const rows = state.table.slice(0, 6);
+    const rows = tableRows(state.table, state.highlight, RESULT_ROWS);
     if (rows.length === 0) {
       this.text('NO SCORES YET', centre, box.y + 86, { color: INK_SOFT, align: 'center' });
     }
-    rows.forEach((entry, i) => {
+    rows.forEach(({ entry, rank, mine }, i) => {
       const y = box.y + 73 + i * 11;
-      const mine = i === state.highlight;
       if (mine) {
         this.ctx.fillStyle = Math.floor(state.nowMs / 300) % 2 === 0 ? GOLD : CREAM_DIM;
         this.ctx.fillRect(box.x + 4, y - 2, box.width - 8, 11);
       }
-      this.text(`${i + 1}`, left + 8, y, { color: INK_SOFT, align: 'right' });
+      this.text(`${rank}`, left + 8, y, { color: INK_SOFT, align: 'right' });
       this.text(entry.name, left + 16, y, { color: INK });
       this.text(formatScore(entry.score), right, y, { color: INK, align: 'right' });
     });
@@ -626,17 +699,27 @@ export class SceneRenderer {
 
     this.window(tableBox);
     this.heading(state.tableTitle, tableBox);
-    const rows = state.table.slice(0, 6);
+    const rows = tableRows(state.table, -1, TITLE_ROWS);
     if (rows.length === 0) {
       this.text('NO SCORES YET', tableBox.x + tableBox.width / 2, tableBox.y + 40, {
         color: INK_SOFT,
         align: 'center',
       });
     }
-    rows.forEach((entry, i) => {
+    rows.forEach(({ entry, rank }, i) => {
       const y = tableBox.y + 19 + i * 12;
-      this.text(entry.name, tableBox.x + 6, y, { color: INK });
-      this.text(formatScore(entry.score), tableBox.x + tableBox.width - 6, y, { color: INK, align: 'right' });
+      const score = formatScore(entry.score);
+      const columns = titleRowColumns(tableBox, this.font.measure(score));
+      this.text(`${rank}`, columns.rankRight, y, { color: INK_SOFT, align: 'right' });
+      this.text(
+        fitName(entry.name, columns.nameWidth, (text) => this.font.measure(text)),
+        columns.nameX,
+        y,
+        {
+          color: INK,
+        },
+      );
+      this.text(score, columns.scoreRight, y, { color: INK, align: 'right' });
     });
   }
 
@@ -732,6 +815,96 @@ const TITLE_HINTS = [
   'C SHIFT HOLD   P ESC PAUSE',
 ] as const;
 const TITLE_HINT_MS = 2600;
+export const FOCUS_HINT = 'CLICK HERE TO PLAY';
+
+/** The least room between a name and its score in a table row. */
+const NAME_SCORE_GAP = 4;
+
+/** The name entry box: room for the widest name (ten Ws, 79px) and its caret, with space either side. */
+export const NAME_FIELD_WIDTH = 98;
+/** Room between the last letter of a name and the caret. */
+const CARET_GAP = 2;
+
+/**
+ * Where a name being typed and its caret go. The two are centred together, so
+ * a long name keeps as much room after the caret as before its first letter.
+ */
+export function nameLine(centre: number, textWidth: number): { textX: number; caretX: number } {
+  const gap = textWidth > 0 ? CARET_GAP : 0;
+  const textX = Math.floor(centre - (textWidth + gap + 1) / 2);
+  return { textX, caretX: textX + textWidth + gap };
+}
+
+/** A name cut short, with a dot to say so, when it would run into its score. */
+export function fitName(name: string, maxWidth: number, measure: (text: string) => number): string {
+  if (measure(name) <= maxWidth) {
+    return name;
+  }
+  for (let length = name.length - 1; length > 0; length -= 1) {
+    const cut = `${name.slice(0, length).trimEnd()}.`;
+    if (measure(cut) <= maxWidth) {
+      return cut;
+    }
+  }
+  return '';
+}
+
+/** How many rows of the table the title screen shows. */
+export const TITLE_ROWS = 6;
+/** The rank column's right edge, in from the box's left side, wide enough for one digit. */
+const TITLE_RANK_RIGHT = 10;
+/** Room between a rank and its name. */
+const RANK_NAME_GAP = 5;
+/** The space inside a title table box on either side. */
+const TITLE_TABLE_PADDING = 6;
+
+/**
+ * Where a title table row's rank, name and score go: the rank right-aligned
+ * in a narrow column, the name after it, and the score right-aligned, with the
+ * name given only the room left before the score.
+ */
+export function titleRowColumns(
+  box: { readonly x: number; readonly width: number },
+  scoreWidth: number,
+): { rankRight: number; nameX: number; nameWidth: number; scoreRight: number } {
+  const rankRight = box.x + TITLE_RANK_RIGHT;
+  const nameX = rankRight + RANK_NAME_GAP;
+  const scoreRight = box.x + box.width - TITLE_TABLE_PADDING;
+  return { rankRight, nameX, nameWidth: scoreRight - scoreWidth - NAME_SCORE_GAP - nameX, scoreRight };
+}
+
+/** How many rows of the table the GAME OVER window has room for. */
+export const RESULT_ROWS = 6;
+
+export interface TableRow {
+  readonly entry: ScoreEntry;
+  /** The place in the table, from 1. */
+  readonly rank: number;
+  readonly mine: boolean;
+}
+
+/**
+ * The rows of a table to show: the top ones, but when the player's own entry
+ * (`highlight`, -1 for none) ranks below them, it takes the last row, so a
+ * player who has just made the table always sees where.
+ */
+export function tableRows(table: readonly ScoreEntry[], highlight: number, count: number): TableRow[] {
+  const rows = table.slice(0, count).map((entry, i) => ({ entry, rank: i + 1, mine: i === highlight }));
+  const mine = table[highlight];
+  if (highlight >= count && mine && rows.length > 0) {
+    rows[rows.length - 1] = { entry: mine, rank: highlight + 1, mine: true };
+  }
+  return rows;
+}
+
+/**
+ * The BEST box. While a game is on, its score counts as soon as it passes the
+ * best. Once the results are up, the score has been saved or skipped, so the
+ * box shows the top of the table the player can see, not a score Esc threw away.
+ */
+export function bestShown(screen: Screen, best: number, score: number): number {
+  return screen.kind === 'results' ? best : Math.max(best, score);
+}
 
 /** Minutes and seconds. */
 export function formatTime(ms: number): string {
@@ -739,10 +912,14 @@ export function formatTime(ms: number): string {
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
 }
 
-function helpFor(state: SceneState): string {
-  switch (state.screen.kind) {
+/** What the help bar says. Without focus no key reaches the game, so it says how to get it back. */
+export function helpFor(screen: Screen, nowMs: number, focused: boolean): string {
+  if (!focused) {
+    return FOCUS_HINT;
+  }
+  switch (screen.kind) {
     case 'title':
-      return TITLE_HINTS[Math.floor(state.nowMs / TITLE_HINT_MS) % TITLE_HINTS.length]!;
+      return TITLE_HINTS[Math.floor(nowMs / TITLE_HINT_MS) % TITLE_HINTS.length]!;
     case 'ready':
     case 'playing':
       return 'Z X TURN  C HOLD  SPACE DROP  P PAUSE';
@@ -751,8 +928,10 @@ function helpFor(state: SceneState): string {
     case 'toppingOut':
       return '';
     case 'nameEntry':
-      return 'TYPE YOUR NAME   ENTER DONE';
+      // Esc throws the score away, so the bar must say so.
+      return 'TYPE YOUR NAME   ENTER SAVE   ESC SKIP';
     case 'results':
-      return 'ARROWS CHOOSE   ENTER SELECT';
+      // Esc leaves for the title from either choice, so the bar says so.
+      return 'ARROWS CHOOSE   ENTER SELECT   ESC TITLE';
   }
 }

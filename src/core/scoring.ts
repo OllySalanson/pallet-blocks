@@ -37,6 +37,11 @@ export function levelFor(startLevel: number, lines: number): number {
   return startLevel + Math.floor(lines / LINES_PER_LEVEL);
 }
 
+/** The line count at which a game that has cleared `lines` goes up its next level. */
+export function nextLevelLines(lines: number): number {
+  return (Math.floor(lines / LINES_PER_LEVEL) + 1) * LINES_PER_LEVEL;
+}
+
 /**
  * How long a piece takes to fall one row, in milliseconds. This is the familiar
  * modern curve: one row a second at level 1, speeding up until it is effectively

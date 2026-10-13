@@ -26,15 +26,19 @@ stack reaches the top.
   nearby spots (off a wall, the floor or the stack) before giving up, so you can
   turn pieces into tight gaps.
 - **Hold.** Put the current piece aside for later, or swap it with the one
-  already held. Once per piece.
+  already held. Once per piece: press it again and the held piece shakes with a
+  low knock.
 - **Ghost.** An outline in the well shows where the piece will land.
 - **Lock delay.** A piece that touches down has half a second before it locks.
-  Moving or turning it resets that, up to 15 times per piece.
-- **Levels.** Every 10 lines is a level, and each level falls faster, from one
+  Moving or turning it resets that, up to 15 times per piece. A resting piece
+  darkens as its time runs out, so you can see how long is left.
+- **Levels.** Every 10 lines is a level (the LINES panel shows the count the
+  next one comes at, such as 13/20), and each level falls faster, from one
   row a second at level 1 to a third of a second at level 5 and a tenth at level
   9; from level 19 a new piece lands on the stack the moment it appears. The
   speed changes the moment the level does, and keeps time even when the machine
-  is busy and drawing few frames. You can start on any level from 1 to 15.
+  is busy and drawing few frames. You can start on any level from 1 to 15, and
+  the game remembers the one you picked for next time.
 
 ### Scoring
 
@@ -77,10 +81,11 @@ also lettered across the well with their points, and so is each new level
 | Arrows, Enter       | Menus              |
 
 Holding left or right repeats after a short delay. The game pauses itself if it
-loses keyboard focus or the tab is hidden.
+loses keyboard focus or the tab is hidden. The pause hides the board, so play
+comes back through READY and GO! before the piece moves again.
 
 High scores are kept in this browser (top 10). When a score makes the table you
-are asked for a name.
+are asked for a name: Enter saves it, Esc skips and the score is not kept.
 
 ## Embedding
 
@@ -129,7 +134,7 @@ hosts that want to size a frame to fit, for example 768x624 for 3x.
 | `onGameOver`      | `(result: GameOverResult) => void \| Promise<void>` | Called once at the end of every game, after any name entry.                                                                                                                                                                                                  |
 | `loadLeaderboard` | `() => Promise<{ name: string; score: number }[]>`  | Optional. A shared leaderboard to show on the title and results screens in place of this browser's own high scores. Called on mount, after each `onGameOver` settles (so a score you have just posted shows up, highlighted), and on returning to the title. |
 | `onExit`          | `() => void`                                        | Optional. Adds EXIT to the title menu (Esc on the title screen does the same) so the player can leave the console.                                                                                                                                           |
-| `startLevel`      | `number`                                            | The level the menu starts on, 1 to 15. Default 1.                                                                                                                                                                                                            |
+| `startLevel`      | `number`                                            | The level the menu starts on, 1 to 15. Default: the level this browser last picked, else 1.                                                                                                                                                                  |
 | `muted`           | `boolean`                                           | Start with sound off. The player can still toggle it with M.                                                                                                                                                                                                 |
 | `storageKey`      | `string`                                            | localStorage key for this browser's high-score table. Default `pallet-blocks:high-scores:v1`.                                                                                                                                                                |
 | `autoFocus`       | `boolean`                                           | Take keyboard focus on mount. Default `true`.                                                                                                                                                                                                                |

@@ -194,6 +194,24 @@ describe('locking', () => {
     }
     expect(game.piece?.kind).toBe('O');
   });
+
+  it('tells how far a resting piece is through its lock delay', () => {
+    const game = newGame({ sequence: ['O', 'T'] });
+    expect(game.lockProgress).toBe(0);
+    game.piece = { kind: 'O', rotation: 0, x: 3, y: 38 };
+    expect(game.lockProgress).toBe(0);
+    game.update(250);
+    expect(game.lockProgress).toBeCloseTo(0.5);
+    game.press('left');
+    game.release('left');
+    expect(game.lockProgress).toBe(0);
+    game.update(400);
+    expect(game.lockProgress).toBeCloseTo(0.8);
+    game.update(101);
+    // The next piece is in the air again.
+    expect(game.piece?.kind).toBe('T');
+    expect(game.lockProgress).toBe(0);
+  });
 });
 
 describe('holding', () => {
@@ -210,6 +228,20 @@ describe('holding', () => {
     game.press('hold');
     expect(game.piece?.kind).toBe('I');
     expect(game.held).toBe('T');
+  });
+
+  it('says so when hold is pressed again for the same piece', () => {
+    const game = newGame({ sequence: ['T', 'I', 'O'] });
+    game.press('hold');
+    expect(eventsOf(game.drainEvents(), 'holdRefused')).toEqual([]);
+    game.press('hold');
+    const events = game.drainEvents();
+    expect(eventsOf(events, 'holdRefused')).toEqual([{ type: 'holdRefused' }]);
+    expect(eventsOf(events, 'hold')).toEqual([]);
+    game.press('hardDrop');
+    game.drainEvents();
+    game.press('hold');
+    expect(eventsOf(game.drainEvents(), 'holdRefused')).toEqual([]);
   });
 
   it('swaps the held piece back in, fresh at the top, after the next lock', () => {
@@ -244,6 +276,70 @@ describe('clearing lines', () => {
     expect(game.phase).toBe('falling');
     expect(game.board.isEmpty()).toBe(true);
     expect(game.piece?.kind).toBe('O');
+  });
+
+  it('keeps a hold pressed during the clear for the next piece', () => {
+    const game = newGame({ sequence: ['I', 'T', 'O'], board: bottom('###....###'), clearDelayMs: 300 });
+    game.press('hardDrop');
+    game.press('hold');
+    game.release('hold');
+    expect(game.held).toBeNull();
+    game.update(301);
+    expect(game.held).toBe('T');
+    expect(game.piece?.kind).toBe('O');
+    expect(game.canHold).toBe(false);
+    expect(eventsOf(game.drainEvents(), 'hold')).toEqual([{ type: 'hold', kind: 'T' }]);
+  });
+
+  it('turns the next piece as it appears when a turn is pressed during the clear', () => {
+    const game = newGame({ sequence: ['I', 'T'], board: bottom('###....###'), clearDelayMs: 300 });
+    game.press('hardDrop');
+    game.press('rotateCCW');
+    game.update(301);
+    expect(game.piece).toMatchObject({ kind: 'T', rotation: 3 });
+
+    const twice = newGame({ sequence: ['I', 'T'], board: bottom('###....###'), clearDelayMs: 300 });
+    twice.press('hardDrop');
+    twice.press('rotateCW');
+    twice.press('rotateCW');
+    twice.update(301);
+    expect(twice.piece).toMatchObject({ kind: 'T', rotation: 2 });
+  });
+
+  it('turns the piece that comes out of hold when both were pressed during the clear', () => {
+    const game = newGame({ sequence: ['I', 'T', 'O'], board: bottom('###....###'), clearDelayMs: 300 });
+    game.press('hardDrop');
+    game.press('rotateCW');
+    game.press('hold');
+    game.update(301);
+    expect(game.held).toBe('T');
+    expect(game.piece).toMatchObject({ kind: 'O', rotation: 1 });
+  });
+
+  it('keeps a hold and turn pressed before play starts until the game applies them', () => {
+    const game = newGame({ sequence: ['T', 'O'] });
+    game.pressLater('rotateCW');
+    game.pressLater('hold');
+    game.pressLater('hardDrop');
+    expect(game.held).toBeNull();
+    expect(game.piece).toMatchObject({ kind: 'T', rotation: 0 });
+    game.applyPressedLater();
+    expect(game.held).toBe('T');
+    expect(game.piece).toMatchObject({ kind: 'O', rotation: 1 });
+    expect(game.board.isEmpty()).toBe(true);
+    game.applyPressedLater();
+    expect(game.held).toBe('T');
+    expect(game.piece).toMatchObject({ kind: 'O', rotation: 1 });
+  });
+
+  it('saves presses kept before play for the next piece when lines are still clearing', () => {
+    const game = newGame({ sequence: ['I', 'T'], board: bottom('###....###'), clearDelayMs: 300 });
+    game.press('hardDrop');
+    game.pressLater('rotateCCW');
+    game.applyPressedLater();
+    expect(game.phase).toBe('clearing');
+    game.update(301);
+    expect(game.piece).toMatchObject({ kind: 'T', rotation: 3 });
   });
 
   it('pays for four lines at once', () => {
