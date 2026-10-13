@@ -49,3 +49,9 @@ One short section per iteration: what a player saw, what changed, and how a play
 - Seen: on the embed page, after clicking the host's Player name box, the game kept showing its usual help bar (ENTER SELECT, ARROWS CHOOSE) but every key went to the host page. Nothing on the screen said why Enter did nothing or how to get the game back. The same happened on the pause menu the game falls into when it loses focus.
 - Changed: the renderer is told whether the game has keyboard focus (`focused` in `SceneState`), and `helpFor` in `src/render/scene.ts` swaps the help bar for CLICK HERE TO PLAY while it does not.
 - How a player notices: click away from the game and the bottom bar says CLICK HERE TO PLAY; click the game and the usual key hints come back.
+
+## The pause menu let the player plan the queue
+
+- Seen: on seed 7, pausing after the first drop blanked the well, as meant ("a pause is not a free look"), but HOLD and all five NEXT pieces stayed on show beside the menu. A player could pause at any moment and study the coming pieces for as long as they liked.
+- Changed: `piecesShown` in `src/render/scene.ts` decides when pieces are drawn. While paused, the stack, the falling piece, the held piece and the NEXT queue are all hidden; the boxes and their headings stay, so the layout does not jump.
+- How a player notices: pause and the HOLD and NEXT boxes are empty; resume and the pieces come back, so a pause is a rest, not a planning break.

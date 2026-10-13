@@ -64,6 +64,15 @@ export function topRowShown(screen: Screen): number {
   return screen.kind === 'results' ? BUFFER_ROWS : PEEK_ROW;
 }
 
+/**
+ * Whether the pieces are on show: the stack, the falling piece, HOLD and the
+ * NEXT queue. They are all hidden while paused, so a pause is not a free look
+ * at the board or a free moment to plan the queue.
+ */
+export function piecesShown(screen: Screen): boolean {
+  return screen.kind !== 'paused';
+}
+
 const COLUMN_WIDTH = 74;
 const LEFT_X = 5;
 const RIGHT_X = SCREEN_WIDTH - 5 - COLUMN_WIDTH;
@@ -218,7 +227,8 @@ export class SceneRenderer {
     }
     this.window(HOLD_BOX);
     this.heading('HOLD', HOLD_BOX);
-    if (game.held) {
+    const shown = piecesShown(state.screen);
+    if (game.held && shown) {
       this.previewPiece(game.held, HOLD_BOX.x, HOLD_BOX.y + 18, HOLD_BOX.width, 18, !game.canHold);
     }
 
@@ -227,9 +237,11 @@ export class SceneRenderer {
 
     this.window(NEXT_BOX);
     this.heading('NEXT', NEXT_BOX);
-    game.preview.forEach((kind, i) => {
-      this.previewPiece(kind, NEXT_BOX.x, NEXT_BOX.y + 18 + i * 21, NEXT_BOX.width, 18, false);
-    });
+    if (shown) {
+      game.preview.forEach((kind, i) => {
+        this.previewPiece(kind, NEXT_BOX.x, NEXT_BOX.y + 18 + i * 21, NEXT_BOX.width, 18, false);
+      });
+    }
 
     this.window(BEST_BOX);
     this.heading(state.tableTitle === 'LEADERBOARD' ? 'TOP SCORE' : 'BEST', BEST_BOX);
@@ -313,8 +325,7 @@ export class SceneRenderer {
     ctx.fillStyle = WELL;
     ctx.fillRect(FIELD_X, fieldY, FIELD_WIDTH, FIELD_HEIGHT);
 
-    if (screen.kind === 'paused') {
-      // The stack is hidden while paused, so a pause is not a free look.
+    if (!piecesShown(screen)) {
       return;
     }
 

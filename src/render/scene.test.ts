@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BUFFER_ROWS, VISIBLE_ROWS } from '../core/board';
-import { FOCUS_HINT, formatScore, formatTime, helpFor, rowOffset, topRowShown } from './scene';
+import { FOCUS_HINT, formatScore, formatTime, helpFor, piecesShown, rowOffset, topRowShown } from './scene';
 
 describe('formatting', () => {
   it('groups score digits in threes', () => {
@@ -37,6 +37,21 @@ describe('rows on screen', () => {
     expect(topRowShown({ kind: 'playing' })).toBe(BUFFER_ROWS - 1);
     expect(topRowShown({ kind: 'toppingOut', elapsedMs: 0 })).toBe(BUFFER_ROWS - 1);
     expect(topRowShown({ kind: 'nameEntry', name: '' })).toBe(BUFFER_ROWS - 1);
+  });
+});
+
+describe('pieces on show', () => {
+  it('hides the stack, HOLD and the NEXT queue while paused, so a pause is no time to plan', () => {
+    expect(piecesShown({ kind: 'paused', cursor: 0, readyElapsedMs: null })).toBe(false);
+    expect(piecesShown({ kind: 'paused', cursor: 1, readyElapsedMs: 300 })).toBe(false);
+  });
+
+  it('shows them in play and once the game is over', () => {
+    expect(piecesShown({ kind: 'ready', elapsedMs: 0 })).toBe(true);
+    expect(piecesShown({ kind: 'playing' })).toBe(true);
+    expect(piecesShown({ kind: 'toppingOut', elapsedMs: 0 })).toBe(true);
+    expect(piecesShown({ kind: 'nameEntry', name: '' })).toBe(true);
+    expect(piecesShown({ kind: 'results', cursor: 0, rank: -1 })).toBe(true);
   });
 });
 
