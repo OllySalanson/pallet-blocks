@@ -121,3 +121,9 @@ One short section per iteration: what a player saw, what changed, and how a play
 - Seen: on seed 7, pausing with the first piece on row 3 and resuming 0.8s later put the board back and the piece fell to row 4 within the second, with no countdown. The pause menu hides the stack, HOLD and NEXT, so the player was moving a live piece before they had read the board again, which at the higher levels can cost a misplaced piece.
 - Changed: `resumeFrom` in `src/app/screens.ts` now sends a pause taken during play back through READY and GO!, as a new game starts. Keys held through the pause wait for GO, and a pause during the countdown still picks it up where it stopped.
 - How a player notices: RESUME, Esc, P or the embed's `resume()` show READY over the board, then GO! with its sound, and only then does the piece fall.
+
+## A turn key thrown at the game's end skipped the results
+
+- Seen: on seed 7 with a full high score table, dropping pieces until the game ended and then tapping X once on the GAME OVER results sent the player straight to the title screen, before they had read their score or the table. X turns the piece in play, so it is one of the keys a player is still hammering as the stack tops out. Space and Z were already kept from choosing there, but X still counted as back.
+- Changed: the results screen reads its keys through `resultsKeyFor` in `src/app/keys.ts`, where a key that does something in play (Space, Z, X) can neither choose nor leave. Enter chooses, Esc or Backspace goes to the title, and the arrows still move between PLAY AGAIN and TITLE.
+- How a player notices: a late turn or drop press at game over no longer skips the results; they stay up until Enter, Esc or Backspace.

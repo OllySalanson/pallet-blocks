@@ -35,6 +35,7 @@ import {
   isMuteKey,
   isPauseKey,
   menuKeyFor,
+  resultsKeyFor,
   type MenuKey,
 } from './keys';
 import {
@@ -823,13 +824,13 @@ export class PalletBlocksApp {
       case 'paused':
         this.pausedKey(key, screen);
         break;
-      case 'results':
-        // Only Enter chooses here: Space and Z are the keys a player is most
-        // likely to still be hammering when the game ends.
-        if (key !== 'confirm' || code === 'Enter' || code === 'NumpadEnter') {
-          this.resultsKey(key, screen.cursor, screen.rank);
+      case 'results': {
+        const resultsKey = resultsKeyFor(code);
+        if (resultsKey) {
+          this.resultsKey(resultsKey, screen.cursor, screen.rank);
         }
         break;
+      }
       default:
         break;
     }

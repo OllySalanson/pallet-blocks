@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_DAS_MS, Game } from '../core/game';
-import { FreshKeys, HeldKeys, gameActionFor, isBrowserShortcut, isPauseKey, menuKeyFor } from './keys';
+import {
+  FreshKeys,
+  HeldKeys,
+  gameActionFor,
+  isBrowserShortcut,
+  isPauseKey,
+  menuKeyFor,
+  resultsKeyFor,
+} from './keys';
 
 describe('controls', () => {
   it('maps the documented keys', () => {
@@ -113,5 +121,25 @@ describe('keys held into a menu', () => {
     fresh.press('ArrowRight', false);
     fresh.release('ArrowRight');
     expect(fresh.counts('ArrowRight', true)).toBe(false);
+  });
+});
+
+describe('keys on the results screen', () => {
+  it('leaves the results only on keys that do nothing in play', () => {
+    expect(['Enter', 'NumpadEnter'].map(resultsKeyFor)).toEqual(['confirm', 'confirm']);
+    expect(['Escape', 'Backspace'].map(resultsKeyFor)).toEqual(['back', 'back']);
+  });
+
+  it('ignores the drop and turn keys a player is still hammering when the game ends', () => {
+    expect(['Space', 'KeyZ', 'KeyX'].map(resultsKeyFor)).toEqual([null, null, null]);
+  });
+
+  it('still lets the arrows choose between PLAY AGAIN and TITLE', () => {
+    expect(['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].map(resultsKeyFor)).toEqual([
+      'left',
+      'right',
+      'up',
+      'down',
+    ]);
   });
 });

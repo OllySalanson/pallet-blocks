@@ -43,6 +43,20 @@ export function menuKeyFor(code: string): MenuKey | null {
   return MENU_KEYS[code] ?? null;
 }
 
+/**
+ * The menu key a press stands for on the GAME OVER results. Only keys that
+ * do nothing in play can choose or leave there: Space, Z and X are the drop
+ * and turn keys a player is most likely to still be hammering when the game
+ * ends, and one stray press would skip the results.
+ */
+export function resultsKeyFor(code: string): MenuKey | null {
+  const key = menuKeyFor(code);
+  if ((key === 'confirm' || key === 'back') && gameActionFor(code)) {
+    return null;
+  }
+  return key;
+}
+
 export const isPauseKey = (code: string): boolean => code === 'Escape' || code === 'KeyP';
 export const isMuteKey = (code: string): boolean => code === 'KeyM';
 
