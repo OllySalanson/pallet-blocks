@@ -15,6 +15,8 @@ import {
   RESULT_ROWS,
   rowOffset,
   tableRows,
+  titleRowColumns,
+  TITLE_ROWS,
   topRowShown,
 } from './scene';
 
@@ -84,6 +86,28 @@ describe('results table', () => {
   it('shows just the top rows when the player did not make the table', () => {
     expect(tableRows(table, -1, RESULT_ROWS).map((row) => row.rank)).toEqual([1, 2, 3, 4, 5, 6]);
     expect(tableRows([], -1, RESULT_ROWS)).toEqual([]);
+  });
+});
+
+describe('title table', () => {
+  const box = { x: 125, width: 110 };
+  const table = Array.from({ length: 10 }, (_, i) => ({ name: `P${i + 1}`, score: 1000 - i * 100 }));
+
+  it('numbers the top rows from 1', () => {
+    expect(tableRows(table, -1, TITLE_ROWS).map((row) => row.rank)).toEqual([1, 2, 3, 4, 5, 6]);
+  });
+
+  it('puts the rank before the name and keeps the name clear of the score', () => {
+    const scoreWidth = 30;
+    const columns = titleRowColumns(box, scoreWidth);
+    expect(columns.rankRight).toBeGreaterThan(box.x);
+    expect(columns.nameX).toBeGreaterThan(columns.rankRight);
+    expect(columns.nameX + columns.nameWidth).toBeLessThan(columns.scoreRight - scoreWidth);
+    expect(columns.scoreRight).toBeLessThan(box.x + box.width);
+  });
+
+  it('gives the name less room as the score grows', () => {
+    expect(titleRowColumns(box, 40).nameWidth).toBe(titleRowColumns(box, 20).nameWidth - 20);
   });
 });
 

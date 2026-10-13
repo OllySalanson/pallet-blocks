@@ -133,3 +133,9 @@ One short section per iteration: what a player saw, what changed, and how a play
 - Seen: on seed 7 the stats panel read LEVEL 1 and LINES 0, and nothing said that the speed goes up every 10 lines. A player had to know the rule and do the sum (at LINES 13, is the next level at 20 or 23?) to see a speed-up coming.
 - Changed: `nextLevelLines` in `src/core/scoring.ts` gives the line count the next level comes at, and the LINES row now reads like 0/10 or 13/20, with the goal in the soft ink and a pixel's gap after the count. The README's Levels bullet says so.
 - How a player notices: the LINES row shows how many lines the next level needs, so they can see a speed-up coming and plan for it.
+
+## The title's high scores had no places
+
+- Seen: the GAME OVER results table numbers its rows 1, 2, 3, but the title screen's HIGH SCORES box listed the same names and scores with no numbers at all, so the two tables of the same scores looked different and a player had to count down the list to see what place a score held.
+- Changed: the title table now takes its rows from `tableRows`, like the results, and prints each place in the soft ink in a narrow column before the name. `titleRowColumns` in `src/render/scene.ts` sets out the rank, name and score so a long name is still cut short with a dot before it reaches its score.
+- How a player notices: the title's HIGH SCORES box reads 1 to 6 down its left edge, matching the results table.

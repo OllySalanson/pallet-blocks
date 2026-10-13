@@ -699,24 +699,27 @@ export class SceneRenderer {
 
     this.window(tableBox);
     this.heading(state.tableTitle, tableBox);
-    const rows = state.table.slice(0, 6);
+    const rows = tableRows(state.table, -1, TITLE_ROWS);
     if (rows.length === 0) {
       this.text('NO SCORES YET', tableBox.x + tableBox.width / 2, tableBox.y + 40, {
         color: INK_SOFT,
         align: 'center',
       });
     }
-    rows.forEach((entry, i) => {
+    rows.forEach(({ entry, rank }, i) => {
       const y = tableBox.y + 19 + i * 12;
       const score = formatScore(entry.score);
-      const nameWidth = tableBox.width - 12 - this.font.measure(score) - NAME_SCORE_GAP;
+      const columns = titleRowColumns(tableBox, this.font.measure(score));
+      this.text(`${rank}`, columns.rankRight, y, { color: INK_SOFT, align: 'right' });
       this.text(
-        fitName(entry.name, nameWidth, (text) => this.font.measure(text)),
-        tableBox.x + 6,
+        fitName(entry.name, columns.nameWidth, (text) => this.font.measure(text)),
+        columns.nameX,
         y,
-        { color: INK },
+        {
+          color: INK,
+        },
       );
-      this.text(score, tableBox.x + tableBox.width - 6, y, { color: INK, align: 'right' });
+      this.text(score, columns.scoreRight, y, { color: INK, align: 'right' });
     });
   }
 
@@ -844,6 +847,30 @@ export function fitName(name: string, maxWidth: number, measure: (text: string) 
     }
   }
   return '';
+}
+
+/** How many rows of the table the title screen shows. */
+export const TITLE_ROWS = 6;
+/** The rank column's right edge, in from the box's left side, wide enough for one digit. */
+const TITLE_RANK_RIGHT = 10;
+/** Room between a rank and its name. */
+const RANK_NAME_GAP = 5;
+/** The space inside a title table box on either side. */
+const TITLE_TABLE_PADDING = 6;
+
+/**
+ * Where a title table row's rank, name and score go: the rank right-aligned
+ * in a narrow column, the name after it, and the score right-aligned, with the
+ * name given only the room left before the score.
+ */
+export function titleRowColumns(
+  box: { readonly x: number; readonly width: number },
+  scoreWidth: number,
+): { rankRight: number; nameX: number; nameWidth: number; scoreRight: number } {
+  const rankRight = box.x + TITLE_RANK_RIGHT;
+  const nameX = rankRight + RANK_NAME_GAP;
+  const scoreRight = box.x + box.width - TITLE_TABLE_PADDING;
+  return { rankRight, nameX, nameWidth: scoreRight - scoreWidth - NAME_SCORE_GAP - nameX, scoreRight };
 }
 
 /** How many rows of the table the GAME OVER window has room for. */
