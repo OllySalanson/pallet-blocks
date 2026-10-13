@@ -30,7 +30,8 @@ stack reaches the top.
   low knock.
 - **Ghost.** An outline in the well shows where the piece will land.
 - **Lock delay.** A piece that touches down has half a second before it locks.
-  Moving or turning it resets that, up to 15 times per piece.
+  Moving or turning it resets that, up to 15 times per piece. A resting piece
+  darkens as its time runs out, so you can see how long is left.
 - **Levels.** Every 10 lines is a level, and each level falls faster, from one
   row a second at level 1 to a third of a second at level 5 and a tenth at level
   9; from level 19 a new piece lands on the stack the moment it appears. The

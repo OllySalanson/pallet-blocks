@@ -103,3 +103,9 @@ One short section per iteration: what a player saw, what changed, and how a play
 - Seen: on seed 7 with no saved scores, a game ending on 174 asked for a name, and Esc skipped it. The GAME OVER results then said NO SCORES YET while the BEST box beside them still read 174, a best the game had not kept. The two boxes on one screen disagreed.
 - Changed: `bestShown` in `src/render/scene.ts` decides the BEST figure. During play and name entry it still rises with the score as soon as the score passes the best. On the results it shows the top of the saved table (or the host's leaderboard), so it always agrees with the table on screen.
 - How a player notices: skip the name and BEST stays at the old best; save it and BEST shows the new score, the same as the top row of HIGH SCORES.
+
+## No sign of how long a resting piece had left
+
+- Seen: on seed 7, a piece soft-dropped onto the floor sat there in its full colour for the whole half-second lock delay and then locked with no warning. A player sliding a piece along the stack (or at 20G, where every piece lands at once) had to guess how much time was left, and how many of the 15 resets they had used.
+- Changed: the core `Game` reports `lockProgress`, from 0 as the piece touches down or is moved to 1 as it locks, and 0 while it falls. The renderer lays the well's dark over the resting piece in three steps (`lockShade` in `src/render/scene.ts`). In the browser the S piece went from 240,196,84 to 206, 170 and then 137 red about 125ms apart, then gave the cream lock flash.
+- How a player notices: a piece on the stack dims as its lock comes. Moving or turning it brings the colour back, which shows the reset worked.

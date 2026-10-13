@@ -194,6 +194,24 @@ describe('locking', () => {
     }
     expect(game.piece?.kind).toBe('O');
   });
+
+  it('tells how far a resting piece is through its lock delay', () => {
+    const game = newGame({ sequence: ['O', 'T'] });
+    expect(game.lockProgress).toBe(0);
+    game.piece = { kind: 'O', rotation: 0, x: 3, y: 38 };
+    expect(game.lockProgress).toBe(0);
+    game.update(250);
+    expect(game.lockProgress).toBeCloseTo(0.5);
+    game.press('left');
+    game.release('left');
+    expect(game.lockProgress).toBe(0);
+    game.update(400);
+    expect(game.lockProgress).toBeCloseTo(0.8);
+    game.update(101);
+    // The next piece is in the air again.
+    expect(game.piece?.kind).toBe('T');
+    expect(game.lockProgress).toBe(0);
+  });
 });
 
 describe('holding', () => {

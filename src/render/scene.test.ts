@@ -8,6 +8,7 @@ import {
   formatTime,
   helpFor,
   holdShakeOffset,
+  lockShade,
   NAME_FIELD_WIDTH,
   nameLine,
   piecesShown,
@@ -181,5 +182,21 @@ describe('refused hold', () => {
     expect(offsets.every((dx) => Number.isInteger(dx) && Math.abs(dx) <= 2)).toBe(true);
     expect(holdShakeOffset(200)).toBe(0);
     expect(holdShakeOffset(10_000)).toBe(0);
+  });
+});
+
+describe('lock delay shade', () => {
+  it('leaves a piece with time to spare as it is', () => {
+    expect(lockShade(0)).toBe(0);
+    expect(lockShade(0.2)).toBe(0);
+  });
+
+  it('darkens a resting piece in steps as its lock comes', () => {
+    const shades = [0.25, 0.5, 0.75].map(lockShade);
+    for (let i = 1; i < shades.length; i += 1) {
+      expect(shades[i]).toBeGreaterThan(shades[i - 1]!);
+    }
+    // Still clearly the piece's own colour at its darkest.
+    expect(lockShade(1)).toBeLessThanOrEqual(0.5);
   });
 });

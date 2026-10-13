@@ -195,6 +195,17 @@ export class Game {
     return this.phase === 'over';
   }
 
+  /**
+   * How far a piece resting on the stack is through its lock delay, from 0 just
+   * after it touched down or was moved to 1 as it locks. 0 while it falls.
+   */
+  get lockProgress(): number {
+    if (this.phase !== 'falling' || !this.isGrounded()) {
+      return 0;
+    }
+    return Math.min(1, this.lockTimerMs / Math.max(1, this.lockDelayMs));
+  }
+
   /** Where the current piece would land if hard dropped. */
   ghostY(): number | null {
     const piece = this.piece;

@@ -96,6 +96,19 @@ const DROP_BUMP_MS = 70;
 const HOLD_SHAKE_STEP_MS = 40;
 const HOLD_SHAKE = [-2, 2, -1, 1] as const;
 
+/** A piece resting on the stack darkens in these steps as its lock delay runs out. */
+const LOCK_SHADES = [0, 0.15, 0.3, 0.45] as const;
+
+/**
+ * How much of the well's dark is laid over a piece `progress` (0 to 1) through
+ * its lock delay: none while it has time, more as the lock comes, so a player
+ * sliding a piece along the stack can see how long is left.
+ */
+export function lockShade(progress: number): number {
+  const step = Math.floor(Math.min(Math.max(progress, 0), 1) * LOCK_SHADES.length);
+  return LOCK_SHADES[Math.min(step, LOCK_SHADES.length - 1)]!;
+}
+
 /** How far the held piece is pushed sideways `elapsedMs` after a refused hold. */
 export function holdShakeOffset(elapsedMs: number): number {
   if (elapsedMs < 0) {
@@ -391,10 +404,17 @@ export class SceneRenderer {
           }
         }
       }
+      const shade = lockShade(game.lockProgress);
       for (const [x, y] of pieceCells(piece)) {
         const offset = rowOffset(y);
         if (offset !== null) {
           this.block(FIELD_X + x * CELL, fieldY + offset, BLOCK_TONES[piece.kind], 'normal');
+          if (shade > 0) {
+            ctx.fillStyle = WELL;
+            ctx.globalAlpha = shade;
+            ctx.fillRect(FIELD_X + x * CELL, fieldY + offset, CELL, CELL);
+            ctx.globalAlpha = 1;
+          }
         }
       }
     }
