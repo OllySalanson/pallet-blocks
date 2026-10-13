@@ -55,6 +55,15 @@ export function rowOffset(boardY: number): number | null {
   return boardY >= PEEK_ROW ? (boardY - BUFFER_ROWS) * CELL : null;
 }
 
+/**
+ * The top board row drawn on a screen. The results window covers the top of
+ * the well but not the strip above it, so there the buffer row is left out
+ * rather than poke out above the window as a stub.
+ */
+export function topRowShown(screen: Screen): number {
+  return screen.kind === 'results' ? BUFFER_ROWS : PEEK_ROW;
+}
+
 const COLUMN_WIDTH = 74;
 const LEFT_X = 5;
 const RIGHT_X = SCREEN_WIDTH - 5 - COLUMN_WIDTH;
@@ -319,7 +328,7 @@ export class SceneRenderer {
     const clearing = game.phase === 'clearing' ? new Set(game.clearingRows) : null;
     const clearProgress = clearing ? 1 - Math.max(0, game.clearTimerMs) / Math.max(1, game.clearDelayMs) : 0;
 
-    for (let y = PEEK_ROW; y < BUFFER_ROWS + VISIBLE_ROWS; y += 1) {
+    for (let y = topRowShown(screen); y < BUFFER_ROWS + VISIBLE_ROWS; y += 1) {
       const greyed = BUFFER_ROWS + VISIBLE_ROWS - y <= curtainRows;
       for (let x = 0; x < BOARD_WIDTH; x += 1) {
         const cell: CellValue = game.board.get(x, y);

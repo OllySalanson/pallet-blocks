@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BUFFER_ROWS, VISIBLE_ROWS } from '../core/board';
-import { formatScore, formatTime, rowOffset } from './scene';
+import { formatScore, formatTime, rowOffset, topRowShown } from './scene';
 
 describe('formatting', () => {
   it('groups score digits in threes', () => {
@@ -30,5 +30,12 @@ describe('rows on screen', () => {
   it('keeps the rest of the buffer out of sight', () => {
     expect(rowOffset(BUFFER_ROWS - 2)).toBeNull();
     expect(rowOffset(0)).toBeNull();
+  });
+
+  it('leaves the row above the field out under the results window, so nothing pokes out above it', () => {
+    expect(topRowShown({ kind: 'results', cursor: 0, rank: -1 })).toBe(BUFFER_ROWS);
+    expect(topRowShown({ kind: 'playing' })).toBe(BUFFER_ROWS - 1);
+    expect(topRowShown({ kind: 'toppingOut', elapsedMs: 0 })).toBe(BUFFER_ROWS - 1);
+    expect(topRowShown({ kind: 'nameEntry', name: '' })).toBe(BUFFER_ROWS - 1);
   });
 });

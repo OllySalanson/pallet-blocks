@@ -37,3 +37,9 @@ One short section per iteration: what a player saw, what changed, and how a play
 - Seen: on seed 7, a SINGLE +100 callout was up when the game was paused straight after the clear. It ran out behind the pause menu, so on resume the panel was back to TIME and the player never got to read it. The same was true of the big clear and level banners and the lock flash.
 - Changed: callouts, banners, the lock flash and the drop trail now keep time by a clock that stands still while paused (`stepEffectsClock` in `src/app/screens.ts`, passed to the renderer as `effectsMs`).
 - How a player notices: pause just after a clear or a level-up and resume, and the callout or banner is still there with the rest of its time to run.
+
+## A stub of the stack above the results window
+
+- Seen: on seed 7, hard dropping every piece in place, the GAME OVER results window covered the well but not the thin strip between it and the title bar. The topped-out block in the row above the field showed there as a grey stub poking out above the window.
+- Changed: the results screen leaves the row above the field out (`topRowShown` in `src/render/scene.ts`). It is still drawn in play, during the game-over curtain and behind the name entry window, where the well top is in view.
+- How a player notices: the results window now sits cleanly under the title bar, with nothing sticking out above it.
