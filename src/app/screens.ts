@@ -38,6 +38,15 @@ export function resumeFrom(paused: Extract<Screen, { kind: 'paused' }>): Screen 
     : { kind: 'ready', elapsedMs: paused.readyElapsedMs };
 }
 
+/**
+ * The clock that callouts, banners and drop effects keep time by: it stands
+ * still while the game is paused, so a callout raised just before a pause is
+ * still up, with its time left, when play resumes.
+ */
+export function stepEffectsClock(effectsMs: number, screen: Screen, dtMs: number): number {
+  return screen.kind === 'paused' ? effectsMs : effectsMs + dtMs;
+}
+
 /** Moves a menu cursor, wrapping at both ends. */
 export function moveCursor(cursor: number, by: number, count: number): number {
   return (((cursor + by) % count) + count) % count;

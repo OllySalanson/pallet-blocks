@@ -31,3 +31,9 @@ One short section per iteration: what a player saw, what changed, and how a play
 - Seen: when the stack reaches the top, a new piece appears one row higher, in the hidden row above the field, and that part of it was never drawn. On seed 7, hard dropping every piece in place, the last T showed as a flat bar of three with its nub missing, and the cells it locked up there stayed invisible.
 - Changed: the renderer (`rowOffset` in `src/render/scene.ts`) now draws the buffer row just above the field in the strip between the well and the title bar, for the falling piece, its ghost and locked cells. The game-over curtain greys that row too.
 - How a player notices: in a top-out scramble the whole piece stays visible, poking out above the well, so its shape and turns can still be read.
+
+## Callouts ran out during a pause
+
+- Seen: on seed 7, a SINGLE +100 callout was up when the game was paused straight after the clear. It ran out behind the pause menu, so on resume the panel was back to TIME and the player never got to read it. The same was true of the big clear and level banners and the lock flash.
+- Changed: callouts, banners, the lock flash and the drop trail now keep time by a clock that stands still while paused (`stepEffectsClock` in `src/app/screens.ts`, passed to the renderer as `effectsMs`).
+- How a player notices: pause just after a clear or a level-up and resume, and the callout or banner is still there with the rest of its time to run.

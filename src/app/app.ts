@@ -46,6 +46,7 @@ import {
   moveCursor,
   pauseOver,
   resumeFrom,
+  stepEffectsClock,
   stepLevel,
   type Screen,
   type TitleItem,
@@ -131,6 +132,8 @@ export class PalletBlocksApp {
   private game: Game | null = null;
   private startLevel: number;
   private nowMs = 0;
+  /** Like `nowMs`, but stopped while paused: in-play effects are timed by it. */
+  private effectsMs = 0;
   private lastFrame: number | null = null;
   private frame = 0;
   private destroyed = false;
@@ -262,6 +265,7 @@ export class PalletBlocksApp {
     const dt = frameDelta(this.lastFrame, time);
     this.lastFrame = time;
     this.nowMs += dt;
+    this.effectsMs = stepEffectsClock(this.effectsMs, this.screen, dt);
     this.update(dt);
     this.render();
     this.frame = requestAnimationFrame(this.tick);
@@ -311,6 +315,7 @@ export class PalletBlocksApp {
       screen: this.screen,
       game: this.game,
       nowMs: this.nowMs,
+      effectsMs: this.effectsMs,
       muted: this.sfx.muted,
       playerName: this.options.playerName ? cleanName(this.options.playerName) : null,
       titleItems: this.titleItems().map((item) => this.titleLabel(item)),
@@ -384,7 +389,7 @@ export class PalletBlocksApp {
 
   private updateBanner(): void {
     const banner = this.banner;
-    if (banner && this.nowMs - banner.atMs >= banner.durationMs) {
+    if (banner && this.effectsMs - banner.atMs >= banner.durationMs) {
       const next = this.bannerQueue.shift();
       this.banner = null;
       if (next) {
@@ -395,14 +400,14 @@ export class PalletBlocksApp {
 
   /** A level banner brings the jingle with it (and the renderer flashes the LEVEL row). */
   private raiseBanner(banner: Banner, soundDelaySeconds: number): void {
-    this.banner = { ...banner, atMs: this.nowMs };
+    this.banner = { ...banner, atMs: this.effectsMs };
     if (banner.kind === 'level') {
       this.sfx.play('levelUp', soundDelaySeconds);
     }
   }
 
   private onLock(lock: LockResult): void {
-    this.flash = { cells: lock.cells, atMs: this.nowMs };
+    this.flash = { cells: lock.cells, atMs: this.effectsMs };
     const distance = this.pendingDropDistance;
     this.pendingDropDistance = null;
     if (distance) {
@@ -412,7 +417,7 @@ export class PalletBlocksApp {
       }
       this.trail = {
         kind: lock.kind,
-        atMs: this.nowMs,
+        atMs: this.effectsMs,
         columns: [...tops].map(([x, y]) => ({ x, fromY: y - distance, toY: y })),
       };
     }
@@ -434,7 +439,7 @@ export class PalletBlocksApp {
 
     const lines = describeLock(lock);
     if (lines.length > 0) {
-      this.callout = { lines, points: lock.points, atMs: this.nowMs };
+      this.callout = { lines, points: lock.points, atMs: this.effectsMs };
     }
     const banner = bannerForLock(lock);
     if (banner) {

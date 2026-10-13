@@ -109,6 +109,8 @@ export interface SceneState {
   readonly screen: Screen;
   readonly game: Game | null;
   readonly nowMs: number;
+  /** The clock callouts, banners, flashes and trails are timed by; it stands still while paused. */
+  readonly effectsMs: number;
   readonly muted: boolean;
   readonly playerName: string | null;
   readonly titleItems: readonly string[];
@@ -243,7 +245,7 @@ export class SceneRenderer {
     this.divider(box, box.y + 31);
     // While a new level is announced its row flashes: the speed has just gone up.
     const banner = state.banner?.kind === 'level' ? state.banner : null;
-    const sinceLevelUp = banner ? state.nowMs - banner.atMs : Infinity;
+    const sinceLevelUp = banner ? state.effectsMs - banner.atMs : Infinity;
     const levelLit = !!banner && sinceLevelUp < banner.durationMs && Math.floor(sinceLevelUp / 150) % 2 === 0;
     if (levelLit) {
       this.ctx.fillStyle = GOLD_WASH;
@@ -258,7 +260,7 @@ export class SceneRenderer {
   private callout(state: SceneState, game: Game): void {
     const box = CALLOUT_BOX;
     const callout = state.callout;
-    if (!callout || state.nowMs - callout.atMs > CALLOUT_MS) {
+    if (!callout || state.effectsMs - callout.atMs > CALLOUT_MS) {
       // Between callouts the panel keeps time.
       this.window(box);
       this.heading('TIME', box);
@@ -272,7 +274,7 @@ export class SceneRenderer {
       return;
     }
     this.window(box, CREAM_LIT);
-    if (isBlinkedOut(state.nowMs - callout.atMs)) {
+    if (isBlinkedOut(state.effectsMs - callout.atMs)) {
       return;
     }
     const centre = box.x + box.width / 2;
@@ -293,7 +295,7 @@ export class SceneRenderer {
   private well(state: SceneState, game: Game): void {
     const ctx = this.ctx;
     const screen = state.screen;
-    const bump = state.trail && state.nowMs - state.trail.atMs < DROP_BUMP_MS ? 1 : 0;
+    const bump = state.trail && state.effectsMs - state.trail.atMs < DROP_BUMP_MS ? 1 : 0;
     this.window({ ...WELL_FRAME, y: WELL_FRAME.y + bump });
     const fieldY = FIELD_Y + bump;
 
@@ -332,7 +334,7 @@ export class SceneRenderer {
         }
         const flashing =
           state.flash &&
-          state.nowMs - state.flash.atMs < LOCK_FLASH_MS &&
+          state.effectsMs - state.flash.atMs < LOCK_FLASH_MS &&
           state.flash.cells.some(([fx, fy]) => fx === x && fy === y);
         this.block(px, py, BLOCK_TONES[greyed ? 'G' : cell], flashing ? 'flash' : 'normal');
       }
@@ -361,7 +363,7 @@ export class SceneRenderer {
     }
 
     if (live && state.banner) {
-      this.banner(state.banner, state.nowMs, fieldY);
+      this.banner(state.banner, state.effectsMs, fieldY);
     }
 
     if (screen.kind === 'ready') {
@@ -377,8 +379,8 @@ export class SceneRenderer {
   }
 
   /** A big moment across the middle of the well: lettering only, so the stack shows through around it. */
-  private banner(banner: ShownBanner, nowMs: number, fieldY: number): void {
-    const age = nowMs - banner.atMs;
+  private banner(banner: ShownBanner, effectsMs: number, fieldY: number): void {
+    const age = effectsMs - banner.atMs;
     if (age >= banner.durationMs || isBlinkedOut(age)) {
       return;
     }
@@ -441,7 +443,7 @@ export class SceneRenderer {
     if (!trail) {
       return;
     }
-    const age = state.nowMs - trail.atMs;
+    const age = state.effectsMs - trail.atMs;
     if (age >= DROP_TRAIL_MS) {
       return;
     }
