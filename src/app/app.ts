@@ -27,6 +27,7 @@ import {
   type ScoreEntry,
 } from './highScores';
 import {
+  FreshKeys,
   HeldKeys,
   gameActionFor,
   isBrowserShortcut,
@@ -126,7 +127,7 @@ export class PalletBlocksApp {
   private readonly resizeObserver: ResizeObserver | null;
   private renderer: SceneRenderer | null = null;
 
-  private screen: Screen = { kind: 'title', cursor: 0 };
+  private current: Screen = { kind: 'title', cursor: 0 };
   /** Keys are ignored until this time, so a player still mashing drop at the end of a game does not skip what comes next. */
   private inputGuardUntil = 0;
   private game: Game | null = null;
@@ -154,6 +155,7 @@ export class PalletBlocksApp {
   private pendingDropDistance: number | null = null;
   private lastSoftDropSound = -Infinity;
   private readonly held = new HeldKeys();
+  private readonly fresh = new FreshKeys();
 
   constructor(root: HTMLElement, options: PalletBlocksOptions = {}) {
     this.root = root;
@@ -214,6 +216,18 @@ export class PalletBlocksApp {
       this.renderer = new SceneRenderer(this.bufferCtx, new PixelFont());
       this.frame = requestAnimationFrame(this.tick);
     });
+  }
+
+  private get screen(): Screen {
+    return this.current;
+  }
+
+  /** A new screen starts with no keys of its own: keys already down are not its. */
+  private set screen(next: Screen) {
+    if (next.kind !== this.current.kind) {
+      this.fresh.clear();
+    }
+    this.current = next;
   }
 
   // --- Public controls ---------------------------------------------------------
@@ -726,6 +740,7 @@ export class PalletBlocksApp {
     }
     this.sfx.unlock();
     this.held.press(event.code);
+    this.fresh.press(event.code, event.repeat);
     if (this.handleKeyDown(event)) {
       event.preventDefault();
     }
@@ -770,6 +785,10 @@ export class PalletBlocksApp {
     if (!key) {
       return false;
     }
+    // A key held from play into a menu would run its cursor off to RESTART or QUIT.
+    if (!this.fresh.counts(code, event.repeat)) {
+      return true;
+    }
     if (event.repeat && (key === 'confirm' || key === 'back')) {
       return true;
     }
@@ -796,6 +815,7 @@ export class PalletBlocksApp {
   private readonly onKeyUp = (event: KeyboardEvent): void => {
     event.stopPropagation();
     this.held.release(event.code);
+    this.fresh.release(event.code);
     const action = gameActionFor(event.code);
     if (action && this.game) {
       this.game.release(action);
@@ -812,12 +832,14 @@ export class PalletBlocksApp {
       return;
     }
     this.held.clear();
+    this.fresh.clear();
     this.pause();
   };
 
   private readonly onVisibilityChange = (): void => {
     if (document.hidden) {
       this.held.clear();
+      this.fresh.clear();
       this.pause();
       this.lastFrame = null;
     }

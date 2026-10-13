@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_DAS_MS, Game } from '../core/game';
-import { HeldKeys, gameActionFor, isBrowserShortcut, isPauseKey, menuKeyFor } from './keys';
+import { FreshKeys, HeldKeys, gameActionFor, isBrowserShortcut, isPauseKey, menuKeyFor } from './keys';
 
 describe('controls', () => {
   it('maps the documented keys', () => {
@@ -84,5 +84,34 @@ describe('keys held before play starts', () => {
     held.press('ArrowDown');
     held.clear();
     expect(held.actions()).toEqual([]);
+  });
+});
+
+describe('keys held into a menu', () => {
+  it('ignores the repeats of a soft drop held into the pause menu', () => {
+    const fresh = new FreshKeys();
+    fresh.press('ArrowDown', false);
+    // P opens the pause menu: a new screen.
+    fresh.clear();
+    expect(fresh.counts('ArrowDown', true)).toBe(false);
+    expect(fresh.counts('ArrowDown', true)).toBe(false);
+  });
+
+  it('lets a key pressed in the menu repeat, and counts a fresh press of a stale key', () => {
+    const fresh = new FreshKeys();
+    fresh.press('ArrowLeft', false);
+    fresh.clear();
+    fresh.press('ArrowDown', false);
+    expect(fresh.counts('ArrowDown', true)).toBe(true);
+    expect(fresh.counts('ArrowLeft', false)).toBe(true);
+    fresh.press('ArrowLeft', true);
+    expect(fresh.counts('ArrowLeft', true)).toBe(false);
+  });
+
+  it('stops counting the repeats of a key once it is let go of', () => {
+    const fresh = new FreshKeys();
+    fresh.press('ArrowRight', false);
+    fresh.release('ArrowRight');
+    expect(fresh.counts('ArrowRight', true)).toBe(false);
   });
 });

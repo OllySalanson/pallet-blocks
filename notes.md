@@ -79,3 +79,9 @@ One short section per iteration: what a player saw, what changed, and how a play
 - Seen: on seed 7, after NEW HIGH SCORE! 202, the help bar read TYPE YOUR NAME and ENTER DONE. Esc, the usual key for closing a box, quietly skipped the name, and the results said NO SCORES YET: the score was gone and nothing had said Esc would do that.
 - Changed: `helpFor` in `src/render/scene.ts` now gives name entry TYPE YOUR NAME, ENTER SAVE and ESC SKIP, and the README says Esc skips and the score is not kept.
 - How a player notices: the bar under the high score box says what each key does, so a player who wants the score kept knows to press Enter.
+
+## A soft drop held into a pause ran the menu cursor off
+
+- Seen: on seed 7, holding Down (soft drop) and pressing Esc opened the pause menu, but the key's auto-repeat went on moving the cursor through RESUME, RESTART and QUIT. When the player let go it was on RESTART, so the Enter or Space meant to resume threw the game away. Holding a direction into the GAME OVER window did the same.
+- Changed: `FreshKeys` in `src/app/keys.ts` remembers which keys went down since the screen last changed. A menu ignores the repeats of a key that was already down when it opened; a key pressed in the menu still repeats as before.
+- How a player notices: pause while soft dropping and the cursor stays on RESUME until you press a key in the menu.

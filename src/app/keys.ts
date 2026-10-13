@@ -104,3 +104,32 @@ export class HeldKeys {
     return [...new Set(this.down.values())];
   }
 }
+
+/**
+ * The keys pressed since the screen last changed. A key already down when a
+ * menu opens (the soft drop held into a pause, say) goes on sending
+ * auto-repeat presses, and a menu must not let those run its cursor away.
+ */
+export class FreshKeys {
+  private readonly down = new Set<string>();
+
+  press(code: string, repeat: boolean): void {
+    if (!repeat) {
+      this.down.add(code);
+    }
+  }
+
+  release(code: string): void {
+    this.down.delete(code);
+  }
+
+  /** Forgets every key, for a new screen or when the keyups can no longer be heard. */
+  clear(): void {
+    this.down.clear();
+  }
+
+  /** Whether a press counts: a fresh one does, and so do the repeats of a key pressed on this screen. */
+  counts(code: string, repeat: boolean): boolean {
+    return !repeat || this.down.has(code);
+  }
+}
