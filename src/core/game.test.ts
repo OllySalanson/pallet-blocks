@@ -246,6 +246,44 @@ describe('clearing lines', () => {
     expect(game.piece?.kind).toBe('O');
   });
 
+  it('keeps a hold pressed during the clear for the next piece', () => {
+    const game = newGame({ sequence: ['I', 'T', 'O'], board: bottom('###....###'), clearDelayMs: 300 });
+    game.press('hardDrop');
+    game.press('hold');
+    game.release('hold');
+    expect(game.held).toBeNull();
+    game.update(301);
+    expect(game.held).toBe('T');
+    expect(game.piece?.kind).toBe('O');
+    expect(game.canHold).toBe(false);
+    expect(eventsOf(game.drainEvents(), 'hold')).toEqual([{ type: 'hold', kind: 'T' }]);
+  });
+
+  it('turns the next piece as it appears when a turn is pressed during the clear', () => {
+    const game = newGame({ sequence: ['I', 'T'], board: bottom('###....###'), clearDelayMs: 300 });
+    game.press('hardDrop');
+    game.press('rotateCCW');
+    game.update(301);
+    expect(game.piece).toMatchObject({ kind: 'T', rotation: 3 });
+
+    const twice = newGame({ sequence: ['I', 'T'], board: bottom('###....###'), clearDelayMs: 300 });
+    twice.press('hardDrop');
+    twice.press('rotateCW');
+    twice.press('rotateCW');
+    twice.update(301);
+    expect(twice.piece).toMatchObject({ kind: 'T', rotation: 2 });
+  });
+
+  it('turns the piece that comes out of hold when both were pressed during the clear', () => {
+    const game = newGame({ sequence: ['I', 'T', 'O'], board: bottom('###....###'), clearDelayMs: 300 });
+    game.press('hardDrop');
+    game.press('rotateCW');
+    game.press('hold');
+    game.update(301);
+    expect(game.held).toBe('T');
+    expect(game.piece).toMatchObject({ kind: 'O', rotation: 1 });
+  });
+
   it('pays for four lines at once', () => {
     const game = newGame({
       sequence: ['I', 'O'],

@@ -160,6 +160,9 @@ export class Game {
 
   private readonly heldKeys = { left: false, right: false, softDrop: false };
   private shiftDirection: -1 | 0 | 1 = 0;
+  /** Turns and a hold pressed while lines clear, for the next piece as it appears. */
+  private bufferedTurns = 0;
+  private bufferedHold = false;
   private dasTimerMs = 0;
   private arrTimerMs = 0;
 
@@ -227,13 +230,21 @@ export class Game {
         this.hardDrop();
         break;
       case 'rotateCW':
-        this.rotate(1);
+      case 'rotateCCW': {
+        const turns = action === 'rotateCW' ? 1 : -1;
+        if (this.phase === 'clearing') {
+          this.bufferedTurns += turns;
+        } else {
+          this.rotate(turns);
+        }
         break;
-      case 'rotateCCW':
-        this.rotate(-1);
-        break;
+      }
       case 'hold':
-        this.hold();
+        if (this.phase === 'clearing') {
+          this.bufferedHold = true;
+        } else {
+          this.hold();
+        }
         break;
     }
   }
@@ -550,6 +561,28 @@ export class Game {
     this.clearingRows = [];
     this.phase = 'falling';
     this.spawn(this.deal());
+    this.applyBufferedInput();
+  }
+
+  /** What was pressed during the clear acts on the new piece: a hold first, then the turns. */
+  private applyBufferedInput(): void {
+    const hold = this.bufferedHold;
+    const turns = ((this.bufferedTurns % 4) + 4) % 4;
+    this.bufferedHold = false;
+    this.bufferedTurns = 0;
+    if (this.phase !== 'falling') {
+      return;
+    }
+    if (hold) {
+      this.hold();
+    }
+    if (turns === 3) {
+      this.rotate(-1);
+    } else {
+      for (let i = 0; i < turns; i += 1) {
+        this.rotate(1);
+      }
+    }
   }
 
   private lockedEntirelyAbove(piece: ActivePiece): boolean {
