@@ -162,7 +162,7 @@ export class Game {
 
   private readonly heldKeys = { left: false, right: false, softDrop: false };
   private shiftDirection: -1 | 0 | 1 = 0;
-  /** Turns and a hold pressed while lines clear, for the next piece as it appears. */
+  /** Turns and a hold pressed while lines clear (or before play starts), for when a piece can take them. */
   private bufferedTurns = 0;
   private bufferedHold = false;
   private dasTimerMs = 0;
@@ -243,22 +243,36 @@ export class Game {
         this.hardDrop();
         break;
       case 'rotateCW':
-      case 'rotateCCW': {
-        const turns = action === 'rotateCW' ? 1 : -1;
-        if (this.phase === 'clearing') {
-          this.bufferedTurns += turns;
-        } else {
-          this.rotate(turns);
-        }
-        break;
-      }
+      case 'rotateCCW':
       case 'hold':
         if (this.phase === 'clearing') {
-          this.bufferedHold = true;
-        } else {
+          this.pressLater(action);
+        } else if (action === 'hold') {
           this.hold();
+        } else {
+          this.rotate(action === 'rotateCW' ? 1 : -1);
         }
         break;
+    }
+  }
+
+  /**
+   * Keeps a hold or turn for `applyPressedLater`, for presses made before the
+   * game can take them (during READY, say). Other actions are ignored: a hard
+   * drop kept for later would drop a piece the player has not looked at.
+   */
+  pressLater(action: GameAction): void {
+    if (action === 'hold') {
+      this.bufferedHold = true;
+    } else if (action === 'rotateCW' || action === 'rotateCCW') {
+      this.bufferedTurns += action === 'rotateCW' ? 1 : -1;
+    }
+  }
+
+  /** Applies what `pressLater` kept to the falling piece; during a clear it waits for the next one. */
+  applyPressedLater(): void {
+    if (this.phase === 'falling') {
+      this.applyBufferedInput();
     }
   }
 
@@ -581,7 +595,7 @@ export class Game {
     this.applyBufferedInput();
   }
 
-  /** What was pressed during the clear acts on the new piece: a hold first, then the turns. */
+  /** What was pressed early acts on the piece: a hold first, then the turns. */
   private applyBufferedInput(): void {
     const hold = this.bufferedHold;
     const turns = ((this.bufferedTurns % 4) + 4) % 4;

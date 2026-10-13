@@ -151,3 +151,9 @@ One short section per iteration: what a player saw, what changed, and how a play
 - Seen: on seed 7 the GAME OVER results bar read only ARROWS CHOOSE and ENTER SELECT. Esc (and Backspace) already leave for the title from either choice, but nothing on screen said so, so a player who wanted the title had to move the cursor across to TITLE first.
 - Changed: `helpFor` in `src/render/scene.ts` now gives the results bar ARROWS CHOOSE, ENTER SELECT and ESC TITLE. It still fits the bar at the native width.
 - How a player notices: the bar under the results names Esc as the quick way back to the title.
+
+## A hold or turn pressed during READY was lost
+
+- Seen: on seed 7 the first S is on show during READY, but tapping C (hold) and X (turn) before GO did nothing: at GO the S was still in play, unturned, with HOLD empty. Since a mid-game pause now resumes through READY, this also caught players who planned their next move while the countdown ran.
+- Changed: `Game` in `src/core/game.ts` has `pressLater` and `applyPressedLater`, which keep a hold and the net turns the same way presses during a line clear are kept. The app keeps them during READY and applies them at GO (`src/app/app.ts`); if lines are still clearing then, they wait for the next piece. A hard drop pressed early is still ignored.
+- How a player notices: a hold or turn tapped during READY happens the moment GO comes up, so the first piece can be swapped or turned before it starts to fall.

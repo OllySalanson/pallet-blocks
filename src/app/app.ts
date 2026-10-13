@@ -308,6 +308,7 @@ export class PalletBlocksApp {
       if (screen.elapsedMs < READY_MS && elapsedMs >= READY_MS) {
         this.sfx.play('go');
         this.pressHeld();
+        this.game?.applyPressedLater();
       }
       this.screen = elapsedMs >= READY_MS + GO_MS ? { kind: 'playing' } : { kind: 'ready', elapsedMs };
       if (elapsedMs >= READY_MS) {
@@ -804,6 +805,9 @@ export class PalletBlocksApp {
         if (!event.repeat && this.acceptsGameInput()) {
           this.game?.press(action);
           this.handleEvents(this.game?.drainEvents() ?? []);
+        } else if (!event.repeat) {
+          // A hold or turn pressed during READY acts at GO, like one pressed during a clear.
+          this.game?.pressLater(action);
         }
         return true;
       }

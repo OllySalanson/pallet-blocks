@@ -316,6 +316,32 @@ describe('clearing lines', () => {
     expect(game.piece).toMatchObject({ kind: 'O', rotation: 1 });
   });
 
+  it('keeps a hold and turn pressed before play starts until the game applies them', () => {
+    const game = newGame({ sequence: ['T', 'O'] });
+    game.pressLater('rotateCW');
+    game.pressLater('hold');
+    game.pressLater('hardDrop');
+    expect(game.held).toBeNull();
+    expect(game.piece).toMatchObject({ kind: 'T', rotation: 0 });
+    game.applyPressedLater();
+    expect(game.held).toBe('T');
+    expect(game.piece).toMatchObject({ kind: 'O', rotation: 1 });
+    expect(game.board.isEmpty()).toBe(true);
+    game.applyPressedLater();
+    expect(game.held).toBe('T');
+    expect(game.piece).toMatchObject({ kind: 'O', rotation: 1 });
+  });
+
+  it('saves presses kept before play for the next piece when lines are still clearing', () => {
+    const game = newGame({ sequence: ['I', 'T'], board: bottom('###....###'), clearDelayMs: 300 });
+    game.press('hardDrop');
+    game.pressLater('rotateCCW');
+    game.applyPressedLater();
+    expect(game.phase).toBe('clearing');
+    game.update(301);
+    expect(game.piece).toMatchObject({ kind: 'T', rotation: 3 });
+  });
+
   it('pays for four lines at once', () => {
     const game = newGame({
       sequence: ['I', 'O'],
