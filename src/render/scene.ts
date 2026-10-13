@@ -121,6 +121,8 @@ export interface SceneState {
   /** The clock callouts, banners, flashes and trails are timed by; it stands still while paused. */
   readonly effectsMs: number;
   readonly muted: boolean;
+  /** Whether the game has keyboard focus. Without it, keys go to the host page. */
+  readonly focused: boolean;
   readonly playerName: string | null;
   readonly titleItems: readonly string[];
   readonly best: number;
@@ -164,7 +166,7 @@ export class SceneRenderer {
     }
 
     this.titleBar(state);
-    this.helpBar(helpFor(state));
+    this.helpBar(helpFor(state.screen, state.nowMs, state.focused));
   }
 
   // --- Chrome ----------------------------------------------------------------
@@ -752,6 +754,7 @@ const TITLE_HINTS = [
   'C SHIFT HOLD   P ESC PAUSE',
 ] as const;
 const TITLE_HINT_MS = 2600;
+export const FOCUS_HINT = 'CLICK HERE TO PLAY';
 
 /** Minutes and seconds. */
 export function formatTime(ms: number): string {
@@ -759,10 +762,14 @@ export function formatTime(ms: number): string {
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
 }
 
-function helpFor(state: SceneState): string {
-  switch (state.screen.kind) {
+/** What the help bar says. Without focus no key reaches the game, so it says how to get it back. */
+export function helpFor(screen: Screen, nowMs: number, focused: boolean): string {
+  if (!focused) {
+    return FOCUS_HINT;
+  }
+  switch (screen.kind) {
     case 'title':
-      return TITLE_HINTS[Math.floor(state.nowMs / TITLE_HINT_MS) % TITLE_HINTS.length]!;
+      return TITLE_HINTS[Math.floor(nowMs / TITLE_HINT_MS) % TITLE_HINTS.length]!;
     case 'ready':
     case 'playing':
       return 'Z X TURN  C HOLD  SPACE DROP  P PAUSE';

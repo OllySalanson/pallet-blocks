@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BUFFER_ROWS, VISIBLE_ROWS } from '../core/board';
-import { formatScore, formatTime, rowOffset, topRowShown } from './scene';
+import { FOCUS_HINT, formatScore, formatTime, helpFor, rowOffset, topRowShown } from './scene';
 
 describe('formatting', () => {
   it('groups score digits in threes', () => {
@@ -37,5 +37,20 @@ describe('rows on screen', () => {
     expect(topRowShown({ kind: 'playing' })).toBe(BUFFER_ROWS - 1);
     expect(topRowShown({ kind: 'toppingOut', elapsedMs: 0 })).toBe(BUFFER_ROWS - 1);
     expect(topRowShown({ kind: 'nameEntry', name: '' })).toBe(BUFFER_ROWS - 1);
+  });
+});
+
+describe('help bar', () => {
+  it('names the keys for the screen while the game has focus', () => {
+    expect(helpFor({ kind: 'playing' }, 0, true)).toContain('HOLD');
+    expect(helpFor({ kind: 'paused', cursor: 0, readyElapsedMs: null }, 0, true)).toContain('RESUME');
+  });
+
+  it('asks for a click on every screen once focus has gone to the host page', () => {
+    expect(FOCUS_HINT).toBe('CLICK HERE TO PLAY');
+    expect(helpFor({ kind: 'title', cursor: 0 }, 0, false)).toBe(FOCUS_HINT);
+    expect(helpFor({ kind: 'paused', cursor: 0, readyElapsedMs: null }, 0, false)).toBe(FOCUS_HINT);
+    expect(helpFor({ kind: 'results', cursor: 0, rank: -1 }, 0, false)).toBe(FOCUS_HINT);
+    expect(helpFor({ kind: 'nameEntry', name: '' }, 0, false)).toBe(FOCUS_HINT);
   });
 });

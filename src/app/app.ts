@@ -317,6 +317,7 @@ export class PalletBlocksApp {
       nowMs: this.nowMs,
       effectsMs: this.effectsMs,
       muted: this.sfx.muted,
+      focused: this.root.contains(document.activeElement),
       playerName: this.options.playerName ? cleanName(this.options.playerName) : null,
       titleItems: this.titleItems().map((item) => this.titleLabel(item)),
       best: this.table[0]?.score ?? 0,

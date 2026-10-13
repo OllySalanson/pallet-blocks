@@ -43,3 +43,9 @@ One short section per iteration: what a player saw, what changed, and how a play
 - Seen: on seed 7, hard dropping every piece in place, the GAME OVER results window covered the well but not the thin strip between it and the title bar. The topped-out block in the row above the field showed there as a grey stub poking out above the window.
 - Changed: the results screen leaves the row above the field out (`topRowShown` in `src/render/scene.ts`). It is still drawn in play, during the game-over curtain and behind the name entry window, where the well top is in view.
 - How a player notices: the results window now sits cleanly under the title bar, with nothing sticking out above it.
+
+## No sign that the keys had stopped reaching the game
+
+- Seen: on the embed page, after clicking the host's Player name box, the game kept showing its usual help bar (ENTER SELECT, ARROWS CHOOSE) but every key went to the host page. Nothing on the screen said why Enter did nothing or how to get the game back. The same happened on the pause menu the game falls into when it loses focus.
+- Changed: the renderer is told whether the game has keyboard focus (`focused` in `SceneState`), and `helpFor` in `src/render/scene.ts` swaps the help bar for CLICK HERE TO PLAY while it does not.
+- How a player notices: click away from the game and the bottom bar says CLICK HERE TO PLAY; click the game and the usual key hints come back.
