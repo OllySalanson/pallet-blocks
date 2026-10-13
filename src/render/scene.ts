@@ -668,8 +668,15 @@ export class SceneRenderer {
     }
     rows.forEach((entry, i) => {
       const y = tableBox.y + 19 + i * 12;
-      this.text(entry.name, tableBox.x + 6, y, { color: INK });
-      this.text(formatScore(entry.score), tableBox.x + tableBox.width - 6, y, { color: INK, align: 'right' });
+      const score = formatScore(entry.score);
+      const nameWidth = tableBox.width - 12 - this.font.measure(score) - NAME_SCORE_GAP;
+      this.text(
+        fitName(entry.name, nameWidth, (text) => this.font.measure(text)),
+        tableBox.x + 6,
+        y,
+        { color: INK },
+      );
+      this.text(score, tableBox.x + tableBox.width - 6, y, { color: INK, align: 'right' });
     });
   }
 
@@ -766,6 +773,23 @@ const TITLE_HINTS = [
 ] as const;
 const TITLE_HINT_MS = 2600;
 export const FOCUS_HINT = 'CLICK HERE TO PLAY';
+
+/** The least room between a name and its score in a table row. */
+const NAME_SCORE_GAP = 4;
+
+/** A name cut short, with a dot to say so, when it would run into its score. */
+export function fitName(name: string, maxWidth: number, measure: (text: string) => number): string {
+  if (measure(name) <= maxWidth) {
+    return name;
+  }
+  for (let length = name.length - 1; length > 0; length -= 1) {
+    const cut = `${name.slice(0, length).trimEnd()}.`;
+    if (measure(cut) <= maxWidth) {
+      return cut;
+    }
+  }
+  return '';
+}
 
 /** Minutes and seconds. */
 export function formatTime(ms: number): string {

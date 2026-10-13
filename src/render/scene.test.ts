@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { BUFFER_ROWS, VISIBLE_ROWS } from '../core/board';
-import { FOCUS_HINT, formatScore, formatTime, helpFor, piecesShown, rowOffset, topRowShown } from './scene';
+import {
+  FOCUS_HINT,
+  fitName,
+  formatScore,
+  formatTime,
+  helpFor,
+  piecesShown,
+  rowOffset,
+  topRowShown,
+} from './scene';
 
 describe('formatting', () => {
   it('groups score digits in threes', () => {
@@ -14,6 +23,25 @@ describe('formatting', () => {
     expect(formatTime(0)).toBe('0:00');
     expect(formatTime(61_500)).toBe('1:01');
     expect(formatTime(3_600_000)).toBe('60:00');
+  });
+});
+
+describe('names in a table', () => {
+  // Five pixels a letter, as a stand-in for the pixel font.
+  const measure = (text: string) => text.length * 5;
+
+  it('leaves a name that fits alone', () => {
+    expect(fitName('OLLY', 20, measure)).toBe('OLLY');
+  });
+
+  it('cuts a long name short with a dot, so it never runs into the score', () => {
+    const fitted = fitName('WWWWWWWWWW', 32, measure);
+    expect(fitted).toBe('WWWWW.');
+    expect(measure(fitted)).toBeLessThanOrEqual(32);
+  });
+
+  it('never leaves a space before the dot', () => {
+    expect(fitName('ASH KETCHUM', 25, measure)).toBe('ASH.');
   });
 });
 

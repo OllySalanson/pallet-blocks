@@ -55,3 +55,9 @@ One short section per iteration: what a player saw, what changed, and how a play
 - Seen: on seed 7, pausing after the first drop blanked the well, as meant ("a pause is not a free look"), but HOLD and all five NEXT pieces stayed on show beside the menu. A player could pause at any moment and study the coming pieces for as long as they liked.
 - Changed: `piecesShown` in `src/render/scene.ts` decides when pieces are drawn. While paused, the stack, the falling piece, the held piece and the NEXT queue are all hidden; the boxes and their headings stay, so the layout does not jump.
 - How a player notices: pause and the HOLD and NEXT boxes are empty; resume and the pieces come back, so a pause is a rest, not a planning break.
+
+## Long names ran into their scores on the title screen
+
+- Seen: the title screen's HIGH SCORES box is narrow, and a name sits at its left with the score pushed to its right. A ten-letter name of wide letters (WWWWWWWWWW) left only a pixel or two before a 3-digit score, and next to a score in the millions the two ran into each other and could not be read.
+- Changed: `fitName` in `src/render/scene.ts` cuts a name that would come within 4px of its score and ends it with a dot. Names that fit are drawn as they are, and the wider GAME OVER table is unchanged.
+- How a player notices: a long name beside a big score shows as, say, WWWWWWW. 1,234,567, with a clear gap, so every row of the table can be read.
