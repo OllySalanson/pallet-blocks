@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { BUFFER_ROWS, VISIBLE_ROWS } from '../core/board';
 import {
+  bestShown,
   FOCUS_HINT,
   fitName,
   formatScore,
@@ -28,6 +29,19 @@ describe('formatting', () => {
     expect(formatTime(0)).toBe('0:00');
     expect(formatTime(61_500)).toBe('1:01');
     expect(formatTime(3_600_000)).toBe('60:00');
+  });
+});
+
+describe('best score', () => {
+  it('counts the score in play as soon as it passes the best', () => {
+    expect(bestShown({ kind: 'playing' }, 100, 250)).toBe(250);
+    expect(bestShown({ kind: 'playing' }, 300, 250)).toBe(300);
+    expect(bestShown({ kind: 'nameEntry', name: '' }, 100, 250)).toBe(250);
+  });
+
+  it('shows only the saved best on the results, so a skipped score is not on show', () => {
+    expect(bestShown({ kind: 'results', cursor: 0, rank: -1 }, 0, 174)).toBe(0);
+    expect(bestShown({ kind: 'results', cursor: 0, rank: 0 }, 174, 174)).toBe(174);
   });
 });
 

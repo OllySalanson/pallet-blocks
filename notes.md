@@ -97,3 +97,9 @@ One short section per iteration: what a player saw, what changed, and how a play
 - Seen: on seed 7, pressing C held the piece and greyed it out. Pressing C again for the same piece gave no sound and no movement, so a player hammering hold in a hurry could not tell whether the key had been read or the game had dropped it. With sound off there was no sign at all.
 - Changed: the core `Game` now reports a `holdRefused` event when hold is pressed for a piece that has already used it. The app plays a low double knock and shakes the greyed held piece 2px side to side for 160ms (`holdShakeOffset` in `src/render/scene.ts`). The shake runs on the effects clock, so it stops while paused.
 - How a player notices: press hold twice and the HOLD piece wobbles with a knock, which says "used already, wait for the next piece".
+
+## BEST showed a score Esc had thrown away
+
+- Seen: on seed 7 with no saved scores, a game ending on 174 asked for a name, and Esc skipped it. The GAME OVER results then said NO SCORES YET while the BEST box beside them still read 174, a best the game had not kept. The two boxes on one screen disagreed.
+- Changed: `bestShown` in `src/render/scene.ts` decides the BEST figure. During play and name entry it still rises with the score as soon as the score passes the best. On the results it shows the top of the saved table (or the host's leaderboard), so it always agrees with the table on screen.
+- How a player notices: skip the name and BEST stays at the old best; save it and BEST shows the new score, the same as the top row of HIGH SCORES.

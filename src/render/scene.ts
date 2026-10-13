@@ -261,7 +261,7 @@ export class SceneRenderer {
     this.window(BEST_BOX);
     this.heading(state.tableTitle === 'LEADERBOARD' ? 'TOP SCORE' : 'BEST', BEST_BOX);
     this.text(
-      formatScore(Math.max(state.best, game.score)),
+      formatScore(bestShown(state.screen, state.best, game.score)),
       BEST_BOX.x + BEST_BOX.width - 6,
       BEST_BOX.y + 21,
       {
@@ -841,6 +841,15 @@ export function tableRows(table: readonly ScoreEntry[], highlight: number, count
     rows[rows.length - 1] = { entry: mine, rank: highlight + 1, mine: true };
   }
   return rows;
+}
+
+/**
+ * The BEST box. While a game is on, its score counts as soon as it passes the
+ * best. Once the results are up, the score has been saved or skipped, so the
+ * box shows the top of the table the player can see, not a score Esc threw away.
+ */
+export function bestShown(screen: Screen, best: number, score: number): number {
+  return screen.kind === 'results' ? best : Math.max(best, score);
 }
 
 /** Minutes and seconds. */
