@@ -1,6 +1,7 @@
 import { BOARD_WIDTH, BUFFER_ROWS, VISIBLE_ROWS, type CellValue } from '../core/board';
 import { pieceCells, type Game } from '../core/game';
 import { shapeOf, type PieceKind } from '../core/pieces';
+import { nextLevelLines } from '../core/scoring';
 import type { Banner } from '../app/callouts';
 import type { ScoreEntry } from '../app/highScores';
 import { CURTAIN_ROW_MS, GO_MS, PAUSE_ITEMS, READY_MS, RESULT_ITEMS, type Screen } from '../app/screens';
@@ -304,8 +305,14 @@ export class SceneRenderer {
     }
     this.text('LEVEL', left, box.y + 35, { color: levelLit ? RED : INK_SOFT });
     this.text(String(game.level), right, box.y + 35, { color: levelLit ? RED : INK, align: 'right' });
+    // LINES shows the count the next level comes at, so the player can see how close it is.
     this.text('LINES', left, box.y + 46, { color: INK_SOFT });
-    this.text(String(game.lines), right, box.y + 46, { color: INK, align: 'right' });
+    const goal = `/${nextLevelLines(game.lines)}`;
+    this.text(goal, right, box.y + 46, { color: INK_SOFT, align: 'right' });
+    this.text(String(game.lines), right - this.font.measure(goal) - 1, box.y + 46, {
+      color: INK,
+      align: 'right',
+    });
   }
 
   private callout(state: SceneState, game: Game): void {

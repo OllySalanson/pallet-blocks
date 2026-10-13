@@ -127,3 +127,9 @@ One short section per iteration: what a player saw, what changed, and how a play
 - Seen: on seed 7 with a full high score table, dropping pieces until the game ended and then tapping X once on the GAME OVER results sent the player straight to the title screen, before they had read their score or the table. X turns the piece in play, so it is one of the keys a player is still hammering as the stack tops out. Space and Z were already kept from choosing there, but X still counted as back.
 - Changed: the results screen reads its keys through `resultsKeyFor` in `src/app/keys.ts`, where a key that does something in play (Space, Z, X) can neither choose nor leave. Enter chooses, Esc or Backspace goes to the title, and the arrows still move between PLAY AGAIN and TITLE.
 - How a player notices: a late turn or drop press at game over no longer skips the results; they stay up until Enter, Esc or Backspace.
+
+## No sign of how close the next level was
+
+- Seen: on seed 7 the stats panel read LEVEL 1 and LINES 0, and nothing said that the speed goes up every 10 lines. A player had to know the rule and do the sum (at LINES 13, is the next level at 20 or 23?) to see a speed-up coming.
+- Changed: `nextLevelLines` in `src/core/scoring.ts` gives the line count the next level comes at, and the LINES row now reads like 0/10 or 13/20, with the goal in the soft ink and a pixel's gap after the count. The README's Levels bullet says so.
+- How a player notices: the LINES row shows how many lines the next level needs, so they can see a speed-up coming and plan for it.
