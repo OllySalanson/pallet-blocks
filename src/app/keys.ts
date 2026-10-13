@@ -69,3 +69,38 @@ export function isBrowserShortcut(chord: KeyChord, playing: boolean): boolean {
   }
   return !(playing && gameActionFor(chord.code) !== null);
 }
+
+/** Actions that last as long as their key is down, rather than happening once on the press. */
+const HELD_ACTIONS: ReadonlySet<GameAction> = new Set(['left', 'right', 'softDrop']);
+
+/**
+ * The move and soft-drop keys that are down right now, so a key held while
+ * the game cannot take it (through READY, or a pause) still counts when play
+ * starts. The browser sends no fresh press for a key that is already down.
+ */
+export class HeldKeys {
+  private readonly down = new Map<string, GameAction>();
+
+  press(code: string): void {
+    const action = gameActionFor(code);
+    if (action && HELD_ACTIONS.has(action)) {
+      // Re-inserting keeps the map in press order, newest last.
+      this.down.delete(code);
+      this.down.set(code, action);
+    }
+  }
+
+  release(code: string): void {
+    this.down.delete(code);
+  }
+
+  /** Forgets every key, for when the keyups can no longer be heard. */
+  clear(): void {
+    this.down.clear();
+  }
+
+  /** The held actions, oldest press first, so pressing them in turn leaves the newest in charge. */
+  actions(): GameAction[] {
+    return [...new Set(this.down.values())];
+  }
+}

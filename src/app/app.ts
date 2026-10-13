@@ -26,7 +26,15 @@ import {
   sortScores,
   type ScoreEntry,
 } from './highScores';
-import { gameActionFor, isBrowserShortcut, isMuteKey, isPauseKey, menuKeyFor, type MenuKey } from './keys';
+import {
+  HeldKeys,
+  gameActionFor,
+  isBrowserShortcut,
+  isMuteKey,
+  isPauseKey,
+  menuKeyFor,
+  type MenuKey,
+} from './keys';
 import {
   CURTAIN_HOLD_MS,
   CURTAIN_ROW_MS,
@@ -140,6 +148,7 @@ export class PalletBlocksApp {
   /** Set by a hard drop, for the lock that follows it in the same batch of events. */
   private pendingDropDistance: number | null = null;
   private lastSoftDropSound = -Infinity;
+  private readonly held = new HeldKeys();
 
   constructor(root: HTMLElement, options: PalletBlocksOptions = {}) {
     this.root = root;
@@ -214,7 +223,7 @@ export class PalletBlocksApp {
 
   resume(): void {
     if (this.screen.kind === 'paused') {
-      this.screen = { kind: 'playing' };
+      this.toPlaying();
       this.sfx.play('pause');
     }
   }
@@ -265,6 +274,7 @@ export class PalletBlocksApp {
       const elapsedMs = screen.elapsedMs + dt;
       if (screen.elapsedMs < READY_MS && elapsedMs >= READY_MS) {
         this.sfx.play('go');
+        this.pressHeld();
       }
       this.screen = elapsedMs >= READY_MS + GO_MS ? { kind: 'playing' } : { kind: 'ready', elapsedMs };
       if (elapsedMs >= READY_MS) {
@@ -550,6 +560,18 @@ export class PalletBlocksApp {
     void this.refreshLeaderboard();
   }
 
+  private toPlaying(): void {
+    this.screen = { kind: 'playing' };
+    this.pressHeld();
+  }
+
+  /** Move and soft-drop keys held while the game could not take them act now. */
+  private pressHeld(): void {
+    for (const action of this.held.actions()) {
+      this.game?.press(action);
+    }
+  }
+
   private isLive(): boolean {
     return this.screen.kind === 'playing' || this.screen.kind === 'ready';
   }
@@ -620,7 +642,7 @@ export class PalletBlocksApp {
       const item = PAUSE_ITEMS[cursor];
       this.sfx.play('menuSelect');
       if (item === 'RESUME') {
-        this.screen = { kind: 'playing' };
+        this.toPlaying();
       } else if (item === 'RESTART') {
         this.startGame();
       } else {
@@ -691,6 +713,7 @@ export class PalletBlocksApp {
       return;
     }
     this.sfx.unlock();
+    this.held.press(event.code);
     if (this.handleKeyDown(event)) {
       event.preventDefault();
     }
@@ -760,6 +783,7 @@ export class PalletBlocksApp {
 
   private readonly onKeyUp = (event: KeyboardEvent): void => {
     event.stopPropagation();
+    this.held.release(event.code);
     const action = gameActionFor(event.code);
     if (action && this.game) {
       this.game.release(action);
@@ -775,11 +799,13 @@ export class PalletBlocksApp {
     if (event.relatedTarget instanceof Node && this.root.contains(event.relatedTarget)) {
       return;
     }
+    this.held.clear();
     this.pause();
   };
 
   private readonly onVisibilityChange = (): void => {
     if (document.hidden) {
+      this.held.clear();
       this.pause();
       this.lastFrame = null;
     }
