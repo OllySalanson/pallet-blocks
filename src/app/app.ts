@@ -154,6 +154,7 @@ export class PalletBlocksApp {
   private bannerQueue: Banner[] = [];
   private trail: DropTrail | null = null;
   private flash: LockFlash | null = null;
+  private holdRefusedAtMs: number | null = null;
   /** Set by a hard drop, for the lock that follows it in the same batch of events. */
   private pendingDropDistance: number | null = null;
   private lastSoftDropSound = -Infinity;
@@ -351,6 +352,7 @@ export class PalletBlocksApp {
       banner: this.banner,
       trail: this.trail,
       flash: this.flash,
+      holdRefusedAtMs: this.holdRefusedAtMs,
     });
     const ctx = this.displayCtx;
     ctx.imageSmoothingEnabled = false;
@@ -371,6 +373,10 @@ export class PalletBlocksApp {
           break;
         case 'hold':
           this.sfx.play('hold');
+          break;
+        case 'holdRefused':
+          this.holdRefusedAtMs = this.effectsMs;
+          this.sfx.play('holdRefused');
           break;
         case 'softDrop':
           if (this.nowMs - this.lastSoftDropSound > SOFT_DROP_SOUND_GAP_MS) {
@@ -486,6 +492,7 @@ export class PalletBlocksApp {
     this.bannerQueue = [];
     this.trail = null;
     this.flash = null;
+    this.holdRefusedAtMs = null;
     this.highlight = -1;
     this.reported = false;
     this.sfx.play('ready');

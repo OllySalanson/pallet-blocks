@@ -15,6 +15,7 @@ export type SoundName =
   | 'hardDrop'
   | 'lock'
   | 'hold'
+  | 'holdRefused'
   | 'clear1'
   | 'clear2'
   | 'clear3'
@@ -64,6 +65,8 @@ const SOUNDS: Readonly<Record<SoundName, { readonly notes: readonly Note[]; read
   },
   lock: { notes: [{ at: 0, freq: 196, dur: 0.05, type: 'triangle', vol: 0.55 }] },
   hold: { notes: arpeggio([76, 83], 0.045, 0.05, 'square', 0.25) },
+  // A low double knock: the hold is used up until the next piece.
+  holdRefused: { notes: arpeggio([43, 43], 0.06, 0.035, 'square', 0.22) },
   clear1: { notes: arpeggio([72, 79], 0.06, 0.08) },
   clear2: { notes: arpeggio([72, 76, 79], 0.055, 0.08) },
   clear3: { notes: arpeggio([72, 76, 79, 84], 0.05, 0.08) },

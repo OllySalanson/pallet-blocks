@@ -26,7 +26,8 @@ stack reaches the top.
   nearby spots (off a wall, the floor or the stack) before giving up, so you can
   turn pieces into tight gaps.
 - **Hold.** Put the current piece aside for later, or swap it with the one
-  already held. Once per piece.
+  already held. Once per piece: press it again and the held piece shakes with a
+  low knock.
 - **Ghost.** An outline in the well shows where the piece will land.
 - **Lock delay.** A piece that touches down has half a second before it locks.
   Moving or turning it resets that, up to 15 times per piece.

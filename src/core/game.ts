@@ -45,6 +45,8 @@ export type GameEvent =
   | { readonly type: 'move' }
   | { readonly type: 'rotate'; readonly spin: SpinKind }
   | { readonly type: 'hold'; readonly kind: PieceKind }
+  /** Hold was pressed, but this piece has already used it. */
+  | { readonly type: 'holdRefused' }
   | { readonly type: 'softDrop' }
   | { readonly type: 'hardDrop'; readonly distance: number }
   | ({ readonly type: 'lock' } & LockResult)
@@ -453,7 +455,11 @@ export class Game {
 
   private hold(): void {
     const piece = this.piece;
-    if (!piece || !this.canHold || this.phase !== 'falling') {
+    if (!piece || this.phase !== 'falling') {
+      return;
+    }
+    if (!this.canHold) {
+      this.events.push({ type: 'holdRefused' });
       return;
     }
     const next = this.held ?? this.deal();

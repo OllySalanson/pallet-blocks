@@ -6,6 +6,7 @@ import {
   formatScore,
   formatTime,
   helpFor,
+  holdShakeOffset,
   NAME_FIELD_WIDTH,
   nameLine,
   piecesShown,
@@ -155,5 +156,16 @@ describe('help bar', () => {
     expect(helpFor({ kind: 'paused', cursor: 0, readyElapsedMs: null }, 0, false)).toBe(FOCUS_HINT);
     expect(helpFor({ kind: 'results', cursor: 0, rank: -1 }, 0, false)).toBe(FOCUS_HINT);
     expect(helpFor({ kind: 'nameEntry', name: '' }, 0, false)).toBe(FOCUS_HINT);
+  });
+});
+
+describe('refused hold', () => {
+  it('shakes the held piece both ways and then settles it back in place', () => {
+    const offsets = Array.from({ length: 10 }, (_, i) => holdShakeOffset(i * 20));
+    expect(offsets.some((dx) => dx < 0)).toBe(true);
+    expect(offsets.some((dx) => dx > 0)).toBe(true);
+    expect(offsets.every((dx) => Number.isInteger(dx) && Math.abs(dx) <= 2)).toBe(true);
+    expect(holdShakeOffset(200)).toBe(0);
+    expect(holdShakeOffset(10_000)).toBe(0);
   });
 });

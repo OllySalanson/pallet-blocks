@@ -212,6 +212,20 @@ describe('holding', () => {
     expect(game.held).toBe('T');
   });
 
+  it('says so when hold is pressed again for the same piece', () => {
+    const game = newGame({ sequence: ['T', 'I', 'O'] });
+    game.press('hold');
+    expect(eventsOf(game.drainEvents(), 'holdRefused')).toEqual([]);
+    game.press('hold');
+    const events = game.drainEvents();
+    expect(eventsOf(events, 'holdRefused')).toEqual([{ type: 'holdRefused' }]);
+    expect(eventsOf(events, 'hold')).toEqual([]);
+    game.press('hardDrop');
+    game.drainEvents();
+    game.press('hold');
+    expect(eventsOf(game.drainEvents(), 'holdRefused')).toEqual([]);
+  });
+
   it('swaps the held piece back in, fresh at the top, after the next lock', () => {
     const game = newGame({ sequence: ['T', 'I', 'O', 'S'] });
     game.press('hold');

@@ -91,3 +91,9 @@ One short section per iteration: what a player saw, what changed, and how a play
 - Seen: on the embed page, a game mounted into a box and then closed with `destroy()` left the box with `tabindex="0"`, `role="application"`, the game's aria-label, a dark background over the host's own, and its focus outline turned off. The README says `destroy()` leaves the element as it found it. A keyboard player tabbing through the host page landed on an empty box with no focus ring, and a screen reader still called it the game.
 - Changed: `borrowElement` in `src/app/borrow.ts` notes the host element's class, attributes and inline styles before the game sets its own, and the game puts them all back on `destroy()`. The game now sets CSS longhands only, so putting a style back cannot wipe a host's own setting.
 - How a player notices: once the console closes, Tab skips the empty box, and the host's own look comes back.
+
+## A second hold did nothing at all
+
+- Seen: on seed 7, pressing C held the piece and greyed it out. Pressing C again for the same piece gave no sound and no movement, so a player hammering hold in a hurry could not tell whether the key had been read or the game had dropped it. With sound off there was no sign at all.
+- Changed: the core `Game` now reports a `holdRefused` event when hold is pressed for a piece that has already used it. The app plays a low double knock and shakes the greyed held piece 2px side to side for 160ms (`holdShakeOffset` in `src/render/scene.ts`). The shake runs on the effects clock, so it stops while paused.
+- How a player notices: press hold twice and the HOLD piece wobbles with a knock, which says "used already, wait for the next piece".

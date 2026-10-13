@@ -92,6 +92,17 @@ const CURTAIN_ALL_ROWS = VISIBLE_ROWS + 1;
 const LOCK_FLASH_MS = 90;
 const DROP_TRAIL_MS = 140;
 const DROP_BUMP_MS = 70;
+/** A refused hold shakes the held piece side to side, a step every this long. */
+const HOLD_SHAKE_STEP_MS = 40;
+const HOLD_SHAKE = [-2, 2, -1, 1] as const;
+
+/** How far the held piece is pushed sideways `elapsedMs` after a refused hold. */
+export function holdShakeOffset(elapsedMs: number): number {
+  if (elapsedMs < 0) {
+    return 0;
+  }
+  return HOLD_SHAKE[Math.floor(elapsedMs / HOLD_SHAKE_STEP_MS)] ?? 0;
+}
 
 interface Rect {
   readonly x: number;
@@ -143,6 +154,8 @@ export interface SceneState {
   readonly banner: ShownBanner | null;
   readonly trail: DropTrail | null;
   readonly flash: LockFlash | null;
+  /** When hold was last pressed for a piece that had already used it, or null. */
+  readonly holdRefusedAtMs: number | null;
 }
 
 const TITLE_TEXT: TextStyle = { color: TITLE_FILL, outline: TITLE_RIM, depth: { color: TITLE_DEPTH, px: 1 } };
@@ -229,7 +242,9 @@ export class SceneRenderer {
     this.heading('HOLD', HOLD_BOX);
     const shown = piecesShown(state.screen);
     if (game.held && shown) {
-      this.previewPiece(game.held, HOLD_BOX.x, HOLD_BOX.y + 18, HOLD_BOX.width, 18, !game.canHold);
+      const shake =
+        state.holdRefusedAtMs === null ? 0 : holdShakeOffset(state.effectsMs - state.holdRefusedAtMs);
+      this.previewPiece(game.held, HOLD_BOX.x + shake, HOLD_BOX.y + 18, HOLD_BOX.width, 18, !game.canHold);
     }
 
     this.stats(game, state);
