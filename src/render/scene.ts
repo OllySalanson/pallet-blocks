@@ -931,6 +931,7 @@ export function helpFor(screen: Screen, nowMs: number, focused: boolean): string
       // Esc throws the score away, so the bar must say so.
       return 'TYPE YOUR NAME   ENTER SAVE   ESC SKIP';
     case 'results':
-      return 'ARROWS CHOOSE   ENTER SELECT';
+      // Esc leaves for the title from either choice, so the bar says so.
+      return 'ARROWS CHOOSE   ENTER SELECT   ESC TITLE';
   }
 }

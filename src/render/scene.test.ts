@@ -189,6 +189,12 @@ describe('help bar', () => {
     expect(help).toContain('ESC SKIP');
   });
 
+  it('says on the results that Esc goes to the title', () => {
+    const help = helpFor({ kind: 'results', cursor: 0, rank: -1 }, 0, true);
+    expect(help).toContain('ENTER SELECT');
+    expect(help).toContain('ESC TITLE');
+  });
+
   it('asks for a click on every screen once focus has gone to the host page', () => {
     expect(FOCUS_HINT).toBe('CLICK HERE TO PLAY');
     expect(helpFor({ kind: 'title', cursor: 0 }, 0, false)).toBe(FOCUS_HINT);

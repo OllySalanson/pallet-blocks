@@ -145,3 +145,9 @@ One short section per iteration: what a player saw, what changed, and how a play
 - Seen: holding X (turn) as the stack topped out filled the NEW HIGH SCORE name box with XXXXXXXXXX. The 700ms guard only caught the first moment, then the key's auto-repeat typed into the box, after any remembered name. Z and C (hold) did the same.
 - Changed: the name box now ignores the auto-repeat of any key that was already down when it came up, using the same `FreshKeys` check the menus use (`src/app/app.ts`). A key pressed in the box still types, and still repeats while held.
 - How a player notices: a turn or hold key still down as the game ends leaves the name alone, so the player types their own name instead of deleting a row of Xs first.
+
+## The results never said Esc goes to the title
+
+- Seen: on seed 7 the GAME OVER results bar read only ARROWS CHOOSE and ENTER SELECT. Esc (and Backspace) already leave for the title from either choice, but nothing on screen said so, so a player who wanted the title had to move the cursor across to TITLE first.
+- Changed: `helpFor` in `src/render/scene.ts` now gives the results bar ARROWS CHOOSE, ENTER SELECT and ESC TITLE. It still fits the bar at the native width.
+- How a player notices: the bar under the results names Esc as the quick way back to the title.
